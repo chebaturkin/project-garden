@@ -1,3 +1,4 @@
+import { t, getLocale, localeTag } from './i18n.js';
 import { plantSvg, growthProfile } from './plants.js';
 
 /** Render the same botanical specimens as the scene, without screen animations. */
@@ -7,12 +8,32 @@ export async function gardenPng(projects, now = Date.now()) {
   const width = projects.length > 25 ? 1920 : 1440;
   const rowHeight = 350;
   const height = 230 + rows * rowHeight + 75;
-  if (height > 32000) throw new Error('сад слишком большой для одного изображения. сохраните его в json или выберите часть через фильтр.');
+  if (height > 32000) throw new Error(t("s114"));
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('рисование недоступно в этом браузере.');
+  if (!ctx) throw new Error(t("s115"));
+  // A language change can update pristine demos while fonts or images load.
+  // Capture every rendered value before the first await, without changing data.
+  const exportLocale = getLocale();
+  const plantWord = { one: t("s40"), few: t("s41"), many: t("s42"), other: exportLocale === 'en' ? t("s42") : t("s41") }[new Intl.PluralRules(exportLocale).select(projects.length)];
+  const scene = {
+    heading: t("s116"),
+    summary: `${projects.length} ${plantWord} · ${new Date(now).toLocaleDateString(localeTag())}`,
+    empty: t("s119"),
+    footer: t("s120"),
+    items: projects.map((source) => {
+      const project = { ...source };
+      const growth = growthProfile(project, now);
+      return {
+        name: project.name || t("s55"),
+        status: project.status === 'archived' ? t("s37") : project.status === 'sleeping' ? t("s36") : growth.label,
+        age: t("s118", { p0: growth.speciesLabel, p1: Math.floor(growth.days), count: Math.floor(growth.days) }),
+        svg: plantSvg(project, false, now).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" '),
+      };
+    }),
+  };
   await document.fonts?.ready;
   ctx.fillStyle = '#f4f1e9';
   ctx.fillRect(0, 0, width, height);
@@ -25,11 +46,10 @@ export async function gardenPng(projects, now = Date.now()) {
   ctx.fillText('project garden', 70, 85);
   ctx.fillStyle = '#303d30';
   ctx.font = '500 64px "Cormorant Garamond", Georgia, serif';
-  ctx.fillText('сад проектов', 70, 154);
+  ctx.fillText(scene.heading, 70, 154);
   ctx.fillStyle = '#727668';
   ctx.font = '12px "Golos Text", sans-serif';
-  const plantWord = { one: 'растение', few: 'растения', many: 'растений', other: 'растения' }[new Intl.PluralRules('ru').select(projects.length)];
-  ctx.fillText(`${projects.length} ${plantWord} · ${new Date(now).toLocaleDateString('ru-RU')}`, 73, 186);
+  ctx.fillText(scene.summary, 73, 186);
   const cellWidth = (width - 140) / columns;
   for (let row = 0; row < rows; row += 1) {
     const baseline = 230 + row * rowHeight + 247;
@@ -42,18 +62,16 @@ export async function gardenPng(projects, now = Date.now()) {
     ctx.fillRect(70, baseline + 1, width - 140, 10);
   }
   // Sequential images keep memory bounded for large gardens.
-  for (let index = 0; index < projects.length; index += 1) {
-    const project = projects[index];
-    const growth = growthProfile(project, now);
+  for (let index = 0; index < scene.items.length; index += 1) {
+    const item = scene.items[index];
     const x = 70 + cellWidth * (index % columns + .5);
     const top = 230 + Math.floor(index / columns) * rowHeight;
-    const svg = plantSvg(project, false, now).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" ');
-    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    const url = URL.createObjectURL(new Blob([item.svg], { type: 'image/svg+xml' }));
     try {
       const image = new Image();
       await new Promise((resolve, reject) => {
         image.onload = resolve;
-        image.onerror = () => reject(new Error('не удалось нарисовать растение.'));
+        image.onerror = () => reject(new Error(t("s117")));
         image.src = url;
       });
       ctx.drawImage(image, x - 90, top, 180, 255);
@@ -63,7 +81,7 @@ export async function gardenPng(projects, now = Date.now()) {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#303d30';
     ctx.font = '500 23px "Cormorant Garamond", Georgia, serif';
-    const name = project.name || 'без названия';
+    const name = item.name;
     const limit = cellWidth - 22;
     let label = name;
     while (ctx.measureText(label).width > limit && label.length > 1) label = label.slice(0, -1);
@@ -71,17 +89,17 @@ export async function gardenPng(projects, now = Date.now()) {
     ctx.fillText(label, x, top + 285);
     ctx.fillStyle = '#727668';
     ctx.font = '10px "Golos Text", sans-serif';
-    ctx.fillText(project.status === 'archived' ? 'гербарий' : project.status === 'sleeping' ? 'на паузе' : growth.label, x, top + 308);
-    ctx.fillText(`${growth.speciesLabel} · ${Math.floor(growth.days)} дн. роста`, x, top + 325);
+    ctx.fillText(item.status, x, top + 308);
+    ctx.fillText(item.age, x, top + 325);
   }
-  if (!projects.length) {
+  if (!scene.items.length) {
     ctx.textAlign = 'center';
     ctx.font = 'italic 32px "Cormorant Garamond", Georgia, serif';
-    ctx.fillText('здесь начнётся новый сад', width / 2, 370);
+    ctx.fillText(scene.empty, width / 2, 370);
   }
   ctx.textAlign = 'left';
   ctx.fillStyle = '#727668';
   ctx.font = 'italic 20px "Cormorant Garamond", Georgia, serif';
-  ctx.fillText('у каждого проекта своё место', 70, height - 60);
-  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('браузер не смог сохранить изображение.')), 'image/png'));
+  ctx.fillText(scene.footer, 70, height - 60);
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error(t("s121"))), 'image/png'));
 }

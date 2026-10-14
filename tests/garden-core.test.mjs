@@ -1,9 +1,9 @@
+import { setLocale } from '../i18n.js';
+setLocale('ru');
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 
-const source = await readFile(new URL('../garden-core.js', import.meta.url), 'utf8');
-const core = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(source)}`);
+const core = await import('../garden-core.js');
 const { normalizeProject, normalizeFile, parseProjectPayload, mergeProjects, filterAndSortProjects, relativeAge, countByStatus } = core;
 
 const now = new Date('2026-10-08T00:00:00.000Z');

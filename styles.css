@@ -287,3 +287,11 @@ textarea { min-height: 58px; resize: vertical; line-height: 1.45; }
 /* Roots cross the soil line; stems meet it instead of hovering above it. */
 .plant-button::before { top: 245px; }
 @media (max-width: 600px) { .plant-button::before { top: 203px; } }
+
+/* Language is a small part of the existing masthead, in its own type and ink. */
+.language-control{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;font:inherit;font-size:12px;letter-spacing:.04em;color:inherit;white-space:nowrap}
+.language-control button{appearance:none;border:0;border-radius:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;min-width:30px;min-height:44px;padding:7px 3px;opacity:.52;text-underline-offset:5px}
+.language-control button[aria-pressed="true"]{opacity:1;text-decoration:underline;text-decoration-thickness:1px}
+.language-control button:hover{opacity:1}
+.language-control button:focus-visible{outline:2px solid var(--ochre);outline-offset:4px}
+.language-control>span{opacity:.35}

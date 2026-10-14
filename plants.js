@@ -1,7 +1,8 @@
+import { t, getLocale, localeTag, mountLocale, translateMessage, setLocale } from './i18n.js';
 const DAY = 86400000;
 const SPECIES = ['shrub', 'fern', 'flower', 'tree'];
-const SPECIES_LABELS = ['куст', 'папоротник', 'космея', 'дерево'];
-const STATUS_LABELS = { active: 'активный рост', sleeping: 'в спячке', archived: 'в архиве' };
+const speciesLabels = () => [t("s122"), t("s123"), t("s124"), t("s125")];
+const STATUS_LABELS = { get active() { return t("s102"); }, get sleeping() { return t("s103"); }, get archived() { return t("s104"); } };
 const FALLBACK_ACCENT = '#718b6a';
 const STEM = '#5d745f';
 const STEM_DARK = '#4d6651';
@@ -34,7 +35,7 @@ export function growthProfile(project = {}, now = Date.now()) {
   const tier = days < 14 ? 'young' : days < 45 ? 'established' : 'mature';
   const progress = tier === 'young' ? days / 14 : tier === 'established' ? (days - 14) / 31 : Math.min(1, (days - 45) / 45);
   const speciesIndex = hashId(String(project.id ?? ''));
-  return { days, tier, progress, label: tier === 'young' ? 'росток' : tier === 'established' ? 'набирает силу' : 'зрелое растение', species: SPECIES[speciesIndex], speciesLabel: SPECIES_LABELS[speciesIndex] };
+  return { days, tier, progress, label: tier === 'young' ? t("s126") : tier === 'established' ? t("s127") : t("s128"), species: SPECIES[speciesIndex], speciesLabel: speciesLabels()[speciesIndex] };
 }
 
 export function transitionGrowth(project, nextStatus, now = Date.now()) {
@@ -55,7 +56,7 @@ export function plantSvg(project = {}, compact = false, now = Date.now()) {
   const species = SPECIES[speciesIndex];
   const status = ['active', 'sleeping', 'archived'].includes(project?.status) ? project.status : 'active';
   const accent = safeColor(project?.color);
-  const name = String(project?.name ?? '').trim() || 'без названия';
+  const name = String(project?.name ?? '').trim() || t("s55");
   const title = `${name}: ${STATUS_LABELS[status]}`;
   const growth = growthProfile(project, now);
   const ageTier = growth.tier;

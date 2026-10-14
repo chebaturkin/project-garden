@@ -1,87 +1,89 @@
 # project garden
 
-локальный сад для проектов, заметок и следующих шагов. у каждого проекта своё растение: оно растёт со временем, отдыхает на паузе и остаётся в гербарии, когда работа завершена.
+english · [русский](README.ru.md)
 
-[открыть сад ↗](https://chebaturkin.github.io/project-garden/)
+a local garden for projects, notes and next steps. every project has a plant: it grows over time, rests on hold and stays in the herbarium when the work is done.
 
-![сад проектов: пять растений на бумажной грядке](docs/images/garden.png)
+[open the garden ↗](https://chebaturkin.github.io/project-garden/?lang=en) · [открыть по-русски](https://chebaturkin.github.io/project-garden/?lang=ru)
 
-## как пользоваться
+![five project plants growing in a paper garden bed](docs/images/en/garden.png)
 
-посадите проект, дайте ему название и оставьте следующий шаг. выберите растение на грядке, чтобы открыть паспорт: там можно изменить цвет, состояние, заметку, описание и дату обновления. изменения сохраняются в этом браузере.
+## using the garden
 
-- ищите по названию, описанию, заметке, следующему шагу и именам файлов;
-- выбирайте растения в росте, на паузе или в архиве, сортируйте по названию, состоянию и обновлению;
-- дублируйте и удаляйте проекты;
-- сохраняйте весь сад в json для переноса в другой браузер;
-- импортируйте zip как список имён файлов, размеров и дат;
-- скачивайте png текущей грядки со всеми её рядами. поиск и фильтр учитываются.
+plant a project, give it a name and leave a next step. choose a plant to open its profile and edit its colour, status, note, description and update date. changes stay in this browser.
 
-растения слегка покачиваются, у каждого свой ритм. ветер можно выключить под грядкой; системная настройка уменьшения движения тоже учитывается. на телефоне растения стоят по два в ряд, а большой сад занимает несколько грядок.
+- search names, descriptions, notes, next steps and file names;
+- filter growing, dormant or archived plants and sort by name, status or update date;
+- duplicate or remove projects;
+- save the whole garden as json to move it to another browser;
+- import a zip as a list of file names, sizes and dates;
+- download a png of every visible row. search and filters apply to the snapshot.
+
+plants sway at their own pace. turn off the wind below the garden or use your system's reduced motion setting. on a phone, plants sit two per row; larger gardens grow across several rows.
+
+choose **ru / en** in the header to switch language without reloading or losing pending edits. a valid `?lang=ru` or `?lang=en` takes priority, followed by your saved choice, the first supported browser language and english. imported and edited project text stays as you wrote it.
 
 <details>
-<summary>паспорт растения, мобильный сад и экспорт</summary>
+<summary>plant profile, mobile garden and export</summary>
 
-<table>
-  <tr>
-    <td valign="top" width="50%"><img src="docs/images/passport.png" alt="паспорт растения: возраст, заметка и следующий шаг" width="310" /></td>
-    <td valign="top" width="50%"><img src="docs/images/mobile.png" alt="мобильный сад с двумя растениями в каждом ряду" width="270" /></td>
-  </tr>
-</table>
+<table><tr>
+<td valign="top" width="50%"><img src="docs/images/en/passport.png" alt="plant profile with age, a note and a next step" width="310" /></td>
+<td valign="top" width="50%"><img src="docs/images/en/mobile.png" alt="mobile garden with two plants in each row" width="270" /></td>
+</tr></table>
 
-снимок использует те же рисунки и стадии роста, что и сад:
+the downloaded snapshot uses the same drawings and growth stages as the garden:
 
-![экспортированный png с ботаническими рисунками](docs/images/snapshot.png)
+![downloaded garden png with botanical drawings](docs/images/en/snapshot.png)
 
 </details>
 
-## как растут растения
+## how plants grow
 
-в паспорте есть «посмотреть рост». ползунок показывает, как выбранное растение меняется за три месяца. наблюдение не меняет проект.
+“watch it grow” in the profile opens a slider for the first three months. the observation does not change the project.
 
-| возраст активного роста | растение |
+| active growth age | plant |
 | --- | --- |
-| первые дни | маленький росток |
-| до двух недель | появляются листья и различия между видами |
-| с 14-го по 44-й день | растение набирает силу |
-| с 45-го дня | зрелый куст, папоротник, космея или дерево |
+| first few days | a small sprout |
+| up to two weeks | leaves and differences between species appear |
+| days 14 to 44 | the plant grows stronger |
+| from day 45 | a mature shrub, fern, cosmos or tree |
 
-пауза и архив останавливают часы. при возвращении к росту возраст продолжает накапливаться. редактирование заметок и даты обновления сохраняет размер растения. вид определяется идентификатором проекта и остаётся прежним; копия начинает новую жизнь с нуля.
+putting a plant on hold or archiving it pauses its clock. resuming growth continues from the same age. editing notes and the update date keeps its size. a project's id determines its species; a duplicate starts growing from zero.
 
 <details>
-<summary>посмотреть рост в работающем приложении</summary>
+<summary>watch growth in the running app</summary>
 
-![окно наблюдения: растение проходит стадии роста](docs/images/growth.gif)
+![the observation window showing a plant's growth stages](docs/images/en/growth.gif)
 
 </details>
 
-## данные и ограничения
+## data and limits
 
-проекты хранятся в indexeddb и резервном зеркале localstorage. приложение обрабатывает импортированные файлы в браузере, не распаковывает zip и не выполняет его содержимое. сервер, аккаунт и ключи api не нужны.
+projects are stored in indexeddb with a localstorage mirror. imported files are processed in the browser. zip contents are neither unpacked nor executed. no server, account or api key is needed.
 
-между устройствами автоматической синхронизации нет. очистка данных сайта удаляет сад, поэтому время от времени стоит сохранять json. шрифты загружаются из google fonts; при недоступном соединении браузер использует запасные шрифты.
+there is no automatic sync between devices. clearing site data removes the garden, so save json copies from time to time. fonts load from google fonts, with fallback fonts when unavailable.
 
-при первом открытии появляются пять примеров. их можно изменить или удалить. очищенный сад останется пустым после перезагрузки.
+five examples appear on the first visit. edit or delete them as needed. a garden you empty stays empty after reloading.
 
-| формат | предел |
+| format | limit |
 | --- | --- |
-| json | 5 мб и 500 проектов в одном файле |
-| zip | 100 мб, 10 000 записей и 500 мб заявленного распакованного размера |
-| список файлов | сохраняется до 500 безопасных имён |
+| json | 5 mb and 500 projects per file |
+| zip | 100 mb, 10,000 entries and 500 mb declared uncompressed size |
+| file list | up to 500 safe names |
 
-пути вроде `../secret.txt`, абсолютные пути и управляющие символы отклоняются. zip64 не поддерживается. если идентификатор импортируемого проекта уже есть в саду, импорт создаст отдельную копию.
+paths such as `../secret.txt`, absolute paths and control characters are rejected. zip64 is unsupported. an imported project whose id already exists becomes a separate copy.
 
-## запустить локально
+## run locally
 
-сборка и установка зависимостей не нужны:
+no build or dependency installation is needed:
 
 ```bash
 python3 -m http.server 4173
 ```
 
-откройте [локальный сад](http://localhost:4173). из-за модулей javascript нужен статический сервер; двойной клик по `index.html` не подходит.
+open the [local garden](http://localhost:4173). javascript modules need a static server, so opening `index.html` directly will not work.
 
-## проверки и снимки
+## checks and captures
 
 ```bash
 node --test tests/*.test.mjs
@@ -89,26 +91,23 @@ node --check app.js
 node --check garden-core.js
 node --check plants.js
 node --check garden-export.js
-```
-
-браузерный сценарий проверяет сохранение, паузу и возобновление, черновики, поиск, импорт, оба экспорта, клавиатуру, уменьшение движения и 500 растений на ширине от 320 до 1440 px:
-
-```bash
 python3 -m pip install playwright pillow
 python3 -m playwright install chromium
 python3 scripts/verify-browser.py --url http://localhost:4173
+APP_URL=http://localhost:4173/ python3 scripts/verify-i18n.py
 ```
 
-с флагом `--capture` тот же сценарий сохраняет скриншоты работающего приложения, экспорт и анимацию для этой страницы в `docs/images/`.
+the browser regression covers persistence, pause/resume, pending edits, search, import, both exports, keyboard input, reduced motion and 500 plants at 320 to 1440 px. locale checks cover defaults, switching with unsaved input, english errors and downloads, saved language and blocked storage/history. `--capture` on the garden regression updates the russian images; `scripts/capture-bilingual.py` captures both languages from the running app.
 
-## устройство и публикация
+## source and deployment
 
-| файл | за что отвечает |
+| file | purpose |
 | --- | --- |
-| `index.html`, `styles.css` | сцена, паспорт и адаптивный интерфейс |
-| `plants.js` | ботанические рисунки и часы роста |
-| `garden-core.js` | нормализация, поиск, сортировка и импорт json |
-| `app.js` | локальное хранилище, взаимодействия и чтение zip |
-| `garden-export.js` | png из тех же растений, что и в саду |
+| `index.html`, `styles.css` | scene, profile and responsive layout |
+| `plants.js` | botanical drawings and growth clock |
+| `garden-core.js` | normalization, search, sorting and json import |
+| `app.js` | local storage, interactions and zip reading |
+| `garden-export.js` | png from the same plants as the garden |
+| `i18n.js` | local dictionaries, locale selection and explicit text bindings |
 
-публикация на github pages выполняется из `main` через [workflow](.github/workflows/pages.yml). решения по текущему визуалу описаны в [спецификации](docs/superpowers/specs/2026-10-14-living-garden-design.md).
+github pages deploys `main` through the [workflow](.github/workflows/pages.yml). the [design specification](docs/superpowers/specs/2026-10-14-living-garden-design.md) records the current visual decisions.

@@ -192,9 +192,9 @@ def checks(browser, url):
         context.close()
     print("browser checks passed: growth, persistence, drafts, filters, imports, exports, keyboard, 500 plants, 320–1440 px, reduced motion")
 
-def captures(browser, url):
+def captures(browser, url, language="ru"):
     from PIL import Image
-    output = ROOT / "docs/images"
+    output = ROOT / "docs/images" / ("en" if language == "en" else "")
     output.mkdir(exist_ok=True, parents=True)
     context, page, errors = new_page(browser, url)
     page.screenshot(path=str(output / "garden.png"), full_page=True, animations="disabled")

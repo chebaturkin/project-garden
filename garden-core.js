@@ -1,5 +1,6 @@
-export const STATUS_LABELS = { active: 'активный рост', sleeping: 'в спячке', archived: 'в архиве' };
-export const STATUS_SHORT = { active: 'активен', sleeping: 'в спячке', archived: 'архив' };
+import { t, getLocale, localeTag, mountLocale, translateMessage, setLocale } from './i18n.js';
+export const STATUS_LABELS = { get active() { return t("s102"); }, get sleeping() { return t("s103"); }, get archived() { return t("s104"); } };
+export const STATUS_SHORT = { get active() { return t("s105"); }, get sleeping() { return t("s103"); }, get archived() { return t("s82"); } };
 export const COLORS = ['#b7644a', '#445344', '#c89b4b', '#718b6a', '#7d6752'];
 
 export const MAX_JSON_BYTES = 5 * 1024 * 1024;
@@ -69,7 +70,7 @@ export function normalizeProject(raw = {}, forcedId) {
   const source = raw && typeof raw === 'object' ? raw : {};
   const rawId = text(forcedId || source.id || uid()).trim().replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 120);
   const id = rawId || uid();
-  const name = text(source.name || source.title || 'без названия').trim().slice(0, 60) || 'без названия';
+  const name = text(source.name || source.title || t("s55")).trim().slice(0, 60) || t("s55");
   const statusValue = source.status === 'dormant' ? 'sleeping' : source.status;
   const status = STATUS_ORDER.includes(statusValue) ? statusValue : 'active';
   const updatedAt = validDate(source.updatedAt) ? new Date(source.updatedAt).toISOString() : new Date().toISOString();
@@ -101,26 +102,26 @@ export function normalizeProject(raw = {}, forcedId) {
 
 export function formatBytes(value) {
   let bytes;
-  try { bytes = Number(value); } catch { return '0 Б'; }
-  if (!Number.isFinite(bytes) || bytes < 0) return '0 Б';
-  if (bytes < 1024) return `${Math.round(bytes)} Б`;
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} КБ`;
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} МБ`;
-  return `${(bytes / 1024 ** 3).toFixed(1)} ГБ`;
+  try { bytes = Number(value); } catch { return t("s106"); }
+  if (!Number.isFinite(bytes) || bytes < 0) return t("s106");
+  if (bytes < 1024) return t("s107", { p0: Math.round(bytes) });
+  if (bytes < 1024 ** 2) return t("s108", { p0: new Intl.NumberFormat(localeTag(),{minimumFractionDigits:1,maximumFractionDigits:1}).format(bytes / 1024) });
+  if (bytes < 1024 ** 3) return t("s109", { p0: new Intl.NumberFormat(localeTag(),{minimumFractionDigits:1,maximumFractionDigits:1}).format(bytes / 1024 ** 2) });
+  return t("s110", { p0: new Intl.NumberFormat(localeTag(),{minimumFractionDigits:1,maximumFractionDigits:1}).format(bytes / 1024 ** 3) });
 }
 
 export function formatDate(value) {
   if (!validDate(value)) return '-';
-  try { return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)).replace('.', ''); } catch { return '-'; }
+  try { return new Intl.DateTimeFormat(localeTag(), { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)).replace('.', ''); } catch { return '-'; }
 }
 
 export function relativeAge(projectOrDate, now = new Date()) {
   const value = projectOrDate && typeof projectOrDate === 'object' ? projectOrDate.updatedAt : projectOrDate;
   if (!validDate(value) || !validDate(now)) return '-';
   const age = Math.max(0, Math.floor((new Date(now).getTime() - new Date(value).getTime()) / DAY));
-  if (age === 0) return 'сегодня';
-  if (age === 1) return 'вчера';
-  return `${age} дн.`;
+  if (age === 0) return t("s111");
+  if (age === 1) return t("s112");
+  return t("s113", { p0: age, count: age });
 }
 
 export function parseProjectPayload(payload, options = {}) {
@@ -165,21 +166,21 @@ export function mergeProjects(existing = [], incoming = []) {
 
 export function filterAndSortProjects(projects = [], options = {}) {
   const { filter = 'all', query = '', sort = 'updated' } = options && typeof options === 'object' ? options : {};
-  const needle = text(query).trim().toLocaleLowerCase('ru-RU');
+  const needle = text(query).trim().toLocaleLowerCase(localeTag());
   const result = (Array.isArray(projects) ? projects : []).filter((project) => {
     if (!project || typeof project !== 'object') return false;
     if (filter !== 'all' && project.status !== filter) return false;
     if (!needle) return true;
     const files = Array.isArray(project.files) ? project.files.filter((file) => file && typeof file === 'object') : [];
-    const haystack = [project.name, project.description, project.note, project.nextStep, ...files.flatMap((file) => [file.name, file.extension])].map(text).join(' ').toLocaleLowerCase('ru-RU');
+    const haystack = [project.name, project.description, project.note, project.nextStep, ...files.flatMap((file) => [file.name, file.extension])].map(text).join(' ').toLocaleLowerCase(localeTag());
     return haystack.includes(needle);
   }).map((project) => project);
   result.sort((a, b) => {
-    if (sort === 'name') return text(a.name).localeCompare(text(b.name), 'ru');
-    if (sort === 'status') return (STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)) || text(a.name).localeCompare(text(b.name), 'ru');
+    if (sort === 'name') return text(a.name).localeCompare(text(b.name), getLocale());
+    if (sort === 'status') return (STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)) || text(a.name).localeCompare(text(b.name), getLocale());
     const aTime = validDate(a.updatedAt) ? new Date(a.updatedAt).getTime() : -Infinity;
     const bTime = validDate(b.updatedAt) ? new Date(b.updatedAt).getTime() : -Infinity;
-    return (bTime - aTime) || text(a.name).localeCompare(text(b.name), 'ru');
+    return (bTime - aTime) || text(a.name).localeCompare(text(b.name), getLocale());
   });
   return result;
 }

@@ -1,9 +1,9 @@
+import { setLocale } from '../i18n.js';
+setLocale('ru');
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 
-const source = await readFile(new URL('../plants.js', import.meta.url), 'utf8');
-const { plantSvg, growthProfile, transitionGrowth } = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(source)}`);
+const { plantSvg, growthProfile, transitionGrowth } = await import('../plants.js');
 
 const now = Date.parse('2026-10-08T00:00:00.000Z');
 const project = (overrides = {}) => ({

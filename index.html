@@ -1,209 +1,204 @@
-<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>project garden: сад проектов</title>
-    <meta name="description" content="локальный сад для проектов, заметок и следующих шагов. растения растут со временем, а данные остаются в вашем браузере." />
-    <meta name="theme-color" content="#f4f1e9" />
-    <meta property="og:title" content="project garden: сад проектов" />
-    <meta property="og:description" content="у каждого проекта своё растение, заметки и следующий шаг. локальный ботанический сад." />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://chebaturkin.github.io/project-garden/" />
-    <meta property="og:image" content="https://chebaturkin.github.io/project-garden/docs/images/garden.png" />
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <a class="skip-link" href="#main-content">к содержанию</a>
-    <main class="app-shell" id="main-content">
-      <header class="topbar">
-        <a class="brand" href="./" aria-label="project garden, на главную">
-          <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
-            <path d="M14 24V9" />
-            <path d="M14 13C8 13 4 10 4 5c6 0 10 3 10 8Z" />
-            <path d="M14 17c6 0 10-3 10-8-6 0-10 3-10 8Z" />
-          </svg>
-          <span class="brand-name">project garden</span>
-        </a>
-        <span class="topbar-note">личный ботанический альбом</span>
-        <nav class="top-actions" aria-label="инструменты журнала">
-          <button class="button button-link" id="import-button" type="button">импорт</button>
-          <button class="button button-link" id="export-json" type="button">экспорт json</button>
-        </nav>
-      </header>
+<!DOCTYPE html>
 
-      <section class="intro" aria-labelledby="page-title">
-        <div>
-          <p class="eyebrow">локальный сад для ваших проектов</p>
-          <h1 id="page-title">сад проектов</h1>
-          <p class="intro-copy">здесь у каждого проекта своё растение, заметки и следующий шаг.</p>
-        </div>
-        <div class="intro-meta" aria-label="сводка сада">
-          <span id="project-count">0 растений</span>
-          <span class="meta-separator" aria-hidden="true">·</span>
-          <span id="last-sync">локально</span>
-        </div>
-      </section>
-
-      <div class="workspace">
-        <section class="garden-column" aria-labelledby="garden-title">
-          <div class="garden-toolbar">
-              <div class="filters" role="group" aria-label="фильтр по состоянию">
-                <button class="filter-button is-active" data-filter="all" type="button">весь сад <span class="filter-count" id="filter-count-all">0</span></button>
-                <button class="filter-button" data-filter="active" type="button">рост <span class="filter-count" id="filter-count-active">0</span></button>
-                <button class="filter-button" data-filter="sleeping" type="button">пауза <span class="filter-count" id="filter-count-sleeping">0</span></button>
-                <button class="filter-button" data-filter="archived" type="button">архив <span class="filter-count" id="filter-count-archived">0</span></button>
-              </div>
-              <div class="garden-tools" role="search">
-                  <label class="search-field">
-                    <span class="visually-hidden">поиск по саду</span>
-                    <input id="project-search" type="search" placeholder="найти проект" autocomplete="off" />
-                    <button class="search-clear" id="clear-search" type="button" aria-label="очистить поиск" hidden>×</button>
-                  </label>
-                  <label class="sort-field">
-                    <span class="visually-hidden">сортировка проектов</span>
-                    <select id="project-sort">
-                      <option value="updated">сначала обновлённые</option>
-                      <option value="name">по названию</option>
-                      <option value="status">по состоянию</option>
-                    </select>
-                  </label>
-              </div>
-              <button class="button button-plant" id="add-project" type="button"><span aria-hidden="true">+</span> посадить проект</button>
-          </div>
-
-          <div class="garden-scene" id="garden-scene">
-            <div class="scene-heading">
-              <h2 id="garden-title">моя грядка</h2>
-              <span class="scene-date" id="scene-date"></span>
-            </div>
-            <svg class="scene-sun" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="13"/><path d="M40 8v10m0 44v10M8 40h10m44 0h10M17 17l7 7m32 32 7 7M17 63l7-7m32-32 7-7"/></svg>
-            <div class="garden-empty" id="garden-empty" hidden>
-              <span class="empty-stamp">пустая грядка</span>
-              <h3 id="empty-title">посадите первый проект</h3>
-              <p id="empty-copy">добавьте растение вручную или импортируйте json. сад сохранится в этом браузере.</p>
-              <button class="button button-secondary" type="button" data-action="empty-add">добавить растение</button>
-              <button class="button button-quiet" id="clear-filter" type="button" hidden>показать все</button>
-            </div>
-            <div class="plants-layer" id="plants-layer"></div>
-            <div class="soil" aria-hidden="true">
-              <span class="soil-label">у каждого проекта своё место</span>
-              <span class="soil-line"></span>
-              <span class="soil-line soil-line-short"></span>
-            </div>
-          </div>
-
-          <div class="garden-footer">
-            <span><i class="legend-dot legend-active" aria-hidden="true"></i> активный рост</span>
-            <span><i class="legend-dot legend-sleeping" aria-hidden="true"></i> спячка</span>
-            <span><i class="legend-dot legend-archived" aria-hidden="true"></i> гербарий</span>
-            <button class="motion-toggle" id="motion-toggle" type="button" aria-pressed="true">ветер включён <span aria-hidden="true">≈</span></button>
-          </div>
-        </section>
-
-        <aside class="side-column">
-          <section class="panel inspector-panel" aria-labelledby="inspector-title">
-            <div class="section-heading compact">
-              <div>
-              <h2 id="inspector-title">паспорт растения</h2>
-              </div>
-              <span class="panel-index" id="panel-index"></span>
-            </div>
-            <div id="inspector-empty" class="inspector-empty">
-                <div id="empty-specimen" class="empty-specimen" aria-hidden="true"></div>
-                <p>у каждого растения<br />есть своя история.</p>
-                <span>выберите его на грядке,<br />чтобы открыть заметки.</span>
-            </div>
-            <form id="project-form" class="project-form" hidden>
-              <input type="hidden" id="project-id" name="id" />
-              <div class="plant-preview" id="plant-preview" aria-hidden="true"></div>
-              <div class="botanical-caption"><span id="plant-species"></span><span id="growth-stage"></span></div>
-              <div class="growth-track" aria-hidden="true"><span id="growth-fill"></span></div>
-              <div class="growth-info"><span id="growth-days"></span><button id="preview-growth" type="button">посмотреть рост <span aria-hidden="true">↗</span></button></div>
-              <div class="status-line">
-                <span class="status-marker" id="status-marker"></span>
-                <span class="mono" id="status-copy">активен</span>
-                <span class="mono status-age" id="status-age">обновлено сегодня</span>
-              </div>
-              <label class="field field-large">
-                <span>название</span>
-                <input id="project-name" name="name" required maxlength="60" placeholder="например, сайт студии" />
-              </label>
-              <div class="form-grid">
-                <label class="field">
-                  <span>состояние</span>
-                  <select id="project-status" name="status">
-                    <option value="active">активный рост</option>
-                    <option value="sleeping">в спячке</option>
-                    <option value="archived">в архиве</option>
-                  </select>
-                </label>
-                <label class="field color-field">
-                  <span>цвет листьев</span>
-                  <input id="project-color" name="color" type="color" value="#b7644a" />
-                </label>
-              </div>
-              <label class="field">
-                <span>заметка</span>
-                <textarea id="project-note" name="note" rows="2" maxlength="240" placeholder="что важно помнить"></textarea>
-              </label>
-              <label class="field next-step-field">
-                <span>следующий шаг</span>
-                <input id="project-next-step" name="nextStep" maxlength="120" placeholder="например, собрать обратную связь" />
-              </label>
-              <details class="project-details">
-                <summary>описание и дата</summary>
-                <label class="field">
-                  <span>описание</span>
-                  <textarea id="project-description" name="description" rows="2" maxlength="220" placeholder="что растёт и зачем"></textarea>
-                </label>
-                <label class="field">
-                  <span>последнее обновление</span>
-                  <input id="project-updated" name="updatedAt" type="date" />
-                </label>
-              </details>
-              <div class="form-actions">
-                <button class="button button-primary" type="submit">сохранить паспорт</button>
-                <button class="button button-secondary" id="duplicate-project" type="button">дублировать</button>
-                <button class="button button-quiet" id="delete-project" type="button">удалить</button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel tools-panel" aria-labelledby="tools-title">
-            <div class="section-heading compact">
-              <div>
-              <h2 id="tools-title">импорт и экспорт</h2>
-              </div>
-            </div>
-              <p class="panel-copy">сад хранится в этом браузере. сохраните копию, чтобы перенести его или оставить себе.</p>
-            <div class="tool-actions">
-              <button class="button button-secondary" id="export-png" type="button">снимок сада <span aria-hidden="true">↓</span></button>
-            </div>
-            <label class="visually-hidden" for="file-input">файл json или zip для импорта</label>
-            <input class="visually-hidden" id="file-input" type="file" aria-label="файл json или zip для импорта" accept=".json,.zip,application/json,application/zip" />
-            <p class="file-note mono" id="file-note">json: весь сад · zip: список файлов</p>
-          </section>
-        </aside>
-      </div>
-      <footer class="page-footer"><span>project garden</span><span>хранится в этом браузере.</span><a href="https://github.com/chebaturkin/project-garden" target="_blank" rel="noreferrer">код на github ↗</a></footer>
-      <p class="toast" id="toast" role="status" aria-live="polite"></p>
-    </main>
-    <dialog class="growth-dialog" id="growth-dialog" aria-labelledby="growth-title">
-      <div class="dialog-heading"><div><p class="eyebrow">ботаническое наблюдение</p><h2 id="growth-title">как растёт растение</h2></div><button id="close-growth" class="dialog-close" type="button" aria-label="закрыть наблюдение">×</button></div>
-      <p id="growth-project-name" class="growth-project-name"></p>
-      <div id="growth-specimen" class="growth-specimen" aria-hidden="true"></div>
-      <div class="growth-reading"><span id="growth-preview-stage"></span><output id="growth-preview-days" for="growth-slider">0 дней</output></div>
-      <label class="visually-hidden" for="growth-slider">дни активного роста</label>
-      <input id="growth-slider" type="range" min="0" max="90" value="0" />
-      <div class="growth-scale" aria-hidden="true"><span>посадка</span><span>две недели</span><span>три месяца</span></div>
-      <p class="growth-explanation">передвиньте ползунок, чтобы посмотреть рост. в саду растение меняется с течением времени. пауза останавливает рост, а заметки помогают помнить, что дальше.</p>
-      <p class="growth-footnote">наблюдение не меняет проект.</p>
-    </dialog>
-    <script type="module" src="app.js"></script>
-  </body>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title data-i18n="s130">project garden: a garden for projects</title>
+<meta content="a local garden for projects, notes and next steps. plants grow over time and your data stays in your browser." data-i18n-content="s129" name="description"/>
+<meta content="#f4f1e9" name="theme-color"/>
+<meta content="project garden: a garden for projects" data-i18n-content="s130" property="og:title"/>
+<meta content="a plant, notes and a next step for every project. a local botanical garden." data-i18n-content="s131" property="og:description"/>
+<meta content="website" property="og:type"/>
+<meta content="https://chebaturkin.github.io/project-garden/?lang=en" data-i18n-content="socialUrl" property="og:url"/>
+<meta content="https://chebaturkin.github.io/project-garden/docs/images/en/garden.png" data-i18n-content="socialImage" property="og:image"/>
+<link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500&amp;family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;family=Golos+Text:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
+</head>
+<body>
+<a class="skip-link" data-i18n="s144" href="#main-content">к содержанию</a>
+<main class="app-shell" id="main-content">
+<header class="topbar">
+<a aria-label="project garden, на главную" class="brand" data-i18n-aria-label="s132" href="./">
+<svg aria-hidden="true" class="brand-mark" focusable="false" viewbox="0 0 28 28">
+<path d="M14 24V9"></path>
+<path d="M14 13C8 13 4 10 4 5c6 0 10 3 10 8Z"></path>
+<path d="M14 17c6 0 10-3 10-8-6 0-10 3-10 8Z"></path>
+</svg>
+<span class="brand-name">project garden</span>
+</a>
+<span class="topbar-note" data-i18n="s145">личный ботанический альбом</span>
+<nav aria-label="инструменты журнала" class="top-actions" data-i18n-aria-label="s133">
+<button class="button button-link" data-i18n="s146" id="import-button" type="button">импорт</button>
+<button class="button button-link" data-i18n="s147" id="export-json" type="button">экспорт json</button>
+</nav>
+<nav aria-label="language" class="language-control" data-language-control=""><button aria-label="русский" aria-pressed="false" data-language="ru" lang="ru" type="button">ru</button><span aria-hidden="true">/</span><button aria-label="english" aria-pressed="false" data-language="en" lang="en" type="button">en</button></nav></header>
+<section aria-labelledby="page-title" class="intro">
+<div>
+<p class="eyebrow" data-i18n="s148">локальный сад для ваших проектов</p>
+<h1 data-i18n="s116" id="page-title">сад проектов</h1>
+<p class="intro-copy" data-i18n="s149">здесь у каждого проекта своё растение, заметки и следующий шаг.</p>
+</div>
+<div aria-label="сводка сада" class="intro-meta" data-i18n-aria-label="s134">
+<span data-i18n="s150" id="project-count">0 растений</span>
+<span aria-hidden="true" class="meta-separator">·</span>
+<span data-i18n="s44" id="last-sync">локально</span>
+</div>
+</section>
+<div class="workspace">
+<section aria-labelledby="garden-title" class="garden-column">
+<div class="garden-toolbar">
+<div aria-label="фильтр по состоянию" class="filters" data-i18n-aria-label="s135" role="group">
+<button class="filter-button is-active" data-filter="all" type="button"><span data-i18n="s151">весь сад</span> <span class="filter-count" id="filter-count-all">0</span></button>
+<button class="filter-button" data-filter="active" type="button"><span data-i18n="s152">рост</span> <span class="filter-count" id="filter-count-active">0</span></button>
+<button class="filter-button" data-filter="sleeping" type="button"><span data-i18n="s153">пауза</span> <span class="filter-count" id="filter-count-sleeping">0</span></button>
+<button class="filter-button" data-filter="archived" type="button"><span data-i18n="s82">архив</span> <span class="filter-count" id="filter-count-archived">0</span></button>
+</div>
+<div class="garden-tools" role="search">
+<label class="search-field">
+<span class="visually-hidden" data-i18n="s154">поиск по саду</span>
+<input autocomplete="off" data-i18n-placeholder="s136" id="project-search" placeholder="найти проект" type="search"/>
+<button aria-label="очистить поиск" class="search-clear" data-i18n-aria-label="s137" hidden="" id="clear-search" type="button">×</button>
+</label>
+<label class="sort-field">
+<span class="visually-hidden" data-i18n="s155">сортировка проектов</span>
+<select id="project-sort">
+<option data-i18n="s156" value="updated">сначала обновлённые</option>
+<option data-i18n="s157" value="name">по названию</option>
+<option data-i18n="s158" value="status">по состоянию</option>
+</select>
+</label>
+</div>
+<button class="button button-plant" id="add-project" type="button"><span aria-hidden="true">+</span> <span data-i18n="s159">посадить проект</span></button>
+</div>
+<div class="garden-scene" id="garden-scene">
+<div class="scene-heading">
+<h2 data-i18n="s160" id="garden-title">моя грядка</h2>
+<span class="scene-date" id="scene-date"></span>
+</div>
+<svg aria-hidden="true" class="scene-sun" viewbox="0 0 80 80"><circle cx="40" cy="40" r="13"></circle><path d="M40 8v10m0 44v10M8 40h10m44 0h10M17 17l7 7m32 32 7 7M17 63l7-7m32-32 7-7"></path></svg>
+<div class="garden-empty" hidden="" id="garden-empty">
+<span class="empty-stamp" data-i18n="s161">пустая грядка</span>
+<h3 data-i18n="s31" id="empty-title">посадите первый проект</h3>
+<p data-i18n="s33" id="empty-copy">добавьте растение вручную или импортируйте json. сад сохранится в этом браузере.</p>
+<button class="button button-secondary" data-action="empty-add" data-i18n="s162" type="button">добавить растение</button>
+<button class="button button-quiet" data-i18n="s163" hidden="" id="clear-filter" type="button">показать все</button>
+</div>
+<div class="plants-layer" id="plants-layer"></div>
+<div aria-hidden="true" class="soil">
+<span class="soil-label" data-i18n="s120">у каждого проекта своё место</span>
+<span class="soil-line"></span>
+<span class="soil-line soil-line-short"></span>
+</div>
+</div>
+<div class="garden-footer">
+<span><i aria-hidden="true" class="legend-dot legend-active"></i> <span data-i18n="s102">активный рост</span></span>
+<span><i aria-hidden="true" class="legend-dot legend-sleeping"></i> <span data-i18n="s164">спячка</span></span>
+<span><i aria-hidden="true" class="legend-dot legend-archived"></i> <span data-i18n="s37">гербарий</span></span>
+<button aria-pressed="true" class="motion-toggle" id="motion-toggle" type="button"><span data-i18n="s165">ветер включён</span> <span aria-hidden="true">≈</span></button>
+</div>
+</section>
+<aside class="side-column">
+<section aria-labelledby="inspector-title" class="panel inspector-panel">
+<div class="section-heading compact">
+<div>
+<h2 data-i18n="s166" id="inspector-title">паспорт растения</h2>
+</div>
+<span class="panel-index" id="panel-index"></span>
+</div>
+<div class="inspector-empty" id="inspector-empty">
+<div aria-hidden="true" class="empty-specimen" id="empty-specimen"></div>
+<p><span data-i18n="s167">у каждого растения</span><br/><span data-i18n="s168">есть своя история.</span></p>
+<span><span data-i18n="s169">выберите его на грядке,</span><br/><span data-i18n="s170">чтобы открыть заметки.</span></span>
+</div>
+<form class="project-form" hidden="" id="project-form">
+<input id="project-id" name="id" type="hidden"/>
+<div aria-hidden="true" class="plant-preview" id="plant-preview"></div>
+<div class="botanical-caption"><span id="plant-species"></span><span id="growth-stage"></span></div>
+<div aria-hidden="true" class="growth-track"><span id="growth-fill"></span></div>
+<div class="growth-info"><span id="growth-days"></span><button id="preview-growth" type="button"><span data-i18n="s171">посмотреть рост</span> <span aria-hidden="true">↗</span></button></div>
+<div class="status-line">
+<span class="status-marker" id="status-marker"></span>
+<span class="mono" data-i18n="s105" id="status-copy">активен</span>
+<span class="mono status-age" data-i18n="s172" id="status-age">обновлено сегодня</span>
+</div>
+<label class="field field-large">
+<span data-i18n="s173">название</span>
+<input data-i18n-placeholder="s138" id="project-name" maxlength="60" name="name" placeholder="например, сайт студии" required=""/>
+</label>
+<div class="form-grid">
+<label class="field">
+<span data-i18n="s174">состояние</span>
+<select id="project-status" name="status">
+<option data-i18n="s102" value="active">активный рост</option>
+<option data-i18n="s103" value="sleeping">в спячке</option>
+<option data-i18n="s104" value="archived">в архиве</option>
+</select>
+</label>
+<label class="field color-field">
+<span data-i18n="s175">цвет листьев</span>
+<input id="project-color" name="color" type="color" value="#b7644a"/>
+</label>
+</div>
+<label class="field">
+<span data-i18n="s176">заметка</span>
+<textarea data-i18n-placeholder="s139" id="project-note" maxlength="240" name="note" placeholder="что важно помнить" rows="2"></textarea>
+</label>
+<label class="field next-step-field">
+<span data-i18n="s177">следующий шаг</span>
+<input data-i18n-placeholder="s140" id="project-next-step" maxlength="120" name="nextStep" placeholder="например, собрать обратную связь"/>
+</label>
+<details class="project-details">
+<summary data-i18n="s178">описание и дата</summary>
+<label class="field">
+<span data-i18n="s179">описание</span>
+<textarea data-i18n-placeholder="s141" id="project-description" maxlength="220" name="description" placeholder="что растёт и зачем" rows="2"></textarea>
+</label>
+<label class="field">
+<span data-i18n="s180">последнее обновление</span>
+<input id="project-updated" name="updatedAt" type="date"/>
+</label>
+</details>
+<div class="form-actions">
+<button class="button button-primary" data-i18n="s181" type="submit">сохранить паспорт</button>
+<button class="button button-secondary" data-i18n="s182" id="duplicate-project" type="button">дублировать</button>
+<button class="button button-quiet" data-i18n="s183" id="delete-project" type="button">удалить</button>
+</div>
+</form>
+</section>
+<section aria-labelledby="tools-title" class="panel tools-panel">
+<div class="section-heading compact">
+<div>
+<h2 data-i18n="s184" id="tools-title">импорт и экспорт</h2>
+</div>
+</div>
+<p class="panel-copy" data-i18n="s185">сад хранится в этом браузере. сохраните копию, чтобы перенести его или оставить себе.</p>
+<div class="tool-actions">
+<button class="button button-secondary" id="export-png" type="button"><span data-i18n="s186">снимок сада</span> <span aria-hidden="true">↓</span></button>
+</div>
+<label class="visually-hidden" data-i18n="s142" for="file-input">файл json или zip для импорта</label>
+<input accept=".json,.zip,application/json,application/zip" aria-label="файл json или zip для импорта" class="visually-hidden" data-i18n-aria-label="s142" id="file-input" type="file"/>
+<p class="file-note mono" data-i18n="s187" id="file-note">json: весь сад · zip: список файлов</p>
+</section>
+</aside>
+</div>
+<footer class="page-footer"><span>project garden</span><span data-i18n="s188">хранится в этом браузере.</span><a data-i18n="s189" href="https://github.com/chebaturkin/project-garden" rel="noreferrer" target="_blank">код на github ↗</a></footer>
+<p aria-live="polite" class="toast" id="toast" role="status"></p>
+</main>
+<dialog aria-labelledby="growth-title" class="growth-dialog" id="growth-dialog">
+<div class="dialog-heading"><div><p class="eyebrow" data-i18n="s190">ботаническое наблюдение</p><h2 data-i18n="s191" id="growth-title">как растёт растение</h2></div><button aria-label="закрыть наблюдение" class="dialog-close" data-i18n-aria-label="s143" id="close-growth" type="button">×</button></div>
+<p class="growth-project-name" id="growth-project-name"></p>
+<div aria-hidden="true" class="growth-specimen" id="growth-specimen"></div>
+<div class="growth-reading"><span id="growth-preview-stage"></span><output data-i18n="s192" for="growth-slider" id="growth-preview-days">0 дней</output></div>
+<label class="visually-hidden" data-i18n="s193" for="growth-slider">дни активного роста</label>
+<input id="growth-slider" max="90" min="0" type="range" value="0"/>
+<div aria-hidden="true" class="growth-scale"><span data-i18n="s194">посадка</span><span data-i18n="s195">две недели</span><span data-i18n="s196">три месяца</span></div>
+<p class="growth-explanation" data-i18n="s197">передвиньте ползунок, чтобы посмотреть рост. в саду растение меняется с течением времени. пауза останавливает рост, а заметки помогают помнить, что дальше.</p>
+<p class="growth-footnote" data-i18n="s198">наблюдение не меняет проект.</p>
+</dialog>
+<script src="app.js" type="module"></script>
+</body>
 </html>
