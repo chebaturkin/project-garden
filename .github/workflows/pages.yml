@@ -15,7 +15,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: verify garden
+        run: |
+          node --test tests/*.test.mjs
+          node --check app.js
+          node --check garden-core.js
+          node --check plants.js
+          node --check garden-export.js
   deploy:
+    needs: verify
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

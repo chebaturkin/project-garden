@@ -1,8 +1,8 @@
-# Project Garden — редактура и качество Implementation Plan
+# project garden — редактура и качество Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans (recommended). Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** привести Project Garden к ясному строчному голосу Тимофея и закрыть найденные UX, accessibility, import/export и GitHub Pages пробелы.
+**Goal:** привести project garden к ясному строчному голосу Тимофея и закрыть найденные UX, accessibility, import/export и GitHub Pages пробелы.
 
 **Architecture:** сохранить vanilla-модули и разделение `garden-core.js` (чистые данные) / `app.js` (DOM и хранилище) / `plants.js` (SVG). UI получает состояние поиска и сортировки через `filterAndSortProjects`, экспорт использует один и тот же нормализованный набор проектов.
 

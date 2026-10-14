@@ -1,4 +1,5 @@
-import { plantSvg as botanicalPlantSvg } from './plants.js';
+import { plantSvg as botanicalPlantSvg, growthProfile, transitionGrowth } from './plants.js';
+import { gardenPng } from './garden-export.js';
 import {
   COLORS,
   MAX_JSON_BYTES,
@@ -66,6 +67,21 @@ const refs = {
   clearSearch: document.querySelector('#clear-search'),
   sort: document.querySelector('#project-sort'),
   duplicate: document.querySelector('#duplicate-project'),
+  sceneDate: document.querySelector('#scene-date'),
+  motionToggle: document.querySelector('#motion-toggle'),
+  emptySpecimen: document.querySelector('#empty-specimen'),
+  species: document.querySelector('#plant-species'),
+  growthStage: document.querySelector('#growth-stage'),
+  growthFill: document.querySelector('#growth-fill'),
+  growthDays: document.querySelector('#growth-days'),
+  previewGrowth: document.querySelector('#preview-growth'),
+  growthDialog: document.querySelector('#growth-dialog'),
+  closeGrowth: document.querySelector('#close-growth'),
+  growthSlider: document.querySelector('#growth-slider'),
+  growthSpecimen: document.querySelector('#growth-specimen'),
+  growthProjectName: document.querySelector('#growth-project-name'),
+  growthPreviewStage: document.querySelector('#growth-preview-stage'),
+  growthPreviewDays: document.querySelector('#growth-preview-days'),
   filterCounts: {
     all: document.querySelector('#filter-count-all'),
     active: document.querySelector('#filter-count-active'),
@@ -86,11 +102,19 @@ let lastSavedAt = null;
 let revision = 0;
 let storedMeta = null;
 let commitQueue = Promise.resolve();
+let inspectorKey = '';
+let growthPreviewProject = null;
+let motionEnabled = true;
+const plantObserver = typeof IntersectionObserver === 'function' ? new IntersectionObserver((entries) => {
+  entries.forEach(({ target, isIntersecting }) => target.classList.toggle('is-in-view', isIntersecting));
+}, { rootMargin: '40px' }) : null;
 
 const DEMO_PROJECTS = [
-  normalizeProject({ id: 'project-studio', name: 'сайт студии', description: 'новая полка для работ и ясного разговора с клиентами.', color: '#b7644a', status: 'active', updatedAt: daysAgo(2), note: 'собрать спокойный первый экран.', nextStep: 'проверить тексты с командой' }),
-  normalizeProject({ id: 'journal', name: 'садовый журнал', description: 'личный архив наблюдений, заметок и маленьких сезонов.', color: '#718b6a', status: 'sleeping', updatedAt: daysAgo(29), note: 'не торопить рост.', nextStep: 'вернуться к структуре весной' }),
-  normalizeProject({ id: 'library', name: 'тихая библиотека', description: 'подборка книг, к которым хочется возвращаться.', color: '#c89b4b', status: 'archived', updatedAt: daysAgo(118), note: 'сохранить как завершённый этюд.', nextStep: '' }),
+  normalizeProject({ id: 'project-studio', name: 'сайт студии', description: 'работы, истории и разговор с будущими клиентами.', color: '#718b6a', status: 'active', createdAt: daysAgo(58), updatedAt: daysAgo(2), note: 'первый экран уже собран. осталось выбрать фотографии.', nextStep: 'проверить тексты на телефоне' }),
+  normalizeProject({ id: 'field-notes', name: 'полевые заметки', description: 'наблюдения, которые хочется сохранить.', color: '#8c9d74', status: 'active', createdAt: daysAgo(24), updatedAt: daysAgo(4), note: 'по одной записи за раз.', nextStep: 'разобрать заметки за неделю' }),
+  normalizeProject({ id: 'bloom', name: 'маленькое дело', description: 'идея, которой пока достаточно одного свободного вечера.', color: '#b7644a', status: 'active', createdAt: daysAgo(9), updatedAt: daysAgo(6), note: 'начать с самого небольшого варианта.', nextStep: 'набросать первый прототип' }),
+  normalizeProject({ id: 'journal', name: 'садовый журнал', description: 'личный архив заметок и маленьких сезонов.', color: '#718b6a', status: 'sleeping', createdAt: daysAgo(52), updatedAt: daysAgo(29), note: 'вернуться, когда появится время.', nextStep: 'перечитать старые записи' }),
+  normalizeProject({ id: 'library', name: 'тихая библиотека', description: 'подборка книг, к которым хочется возвращаться.', color: '#c89b4b', status: 'archived', createdAt: daysAgo(180), updatedAt: daysAgo(118), note: 'подборка собрана. сохранить рядом.', nextStep: '' }),
 ];
 
 function daysAgo(days) {
@@ -177,16 +201,16 @@ function openDatabase() {
       database.onversionchange = () => { try { database.close(); } catch { /* ignore */ } };
       finish(resolve, database);
     };
-    request.onerror = () => finish(reject, request.error || new Error('не удалось открыть IndexedDB.'));
-    request.onblocked = () => finish(reject, new Error('IndexedDB заблокирована другим окном.'));
+    request.onerror = () => finish(reject, request.error || new Error('не удалось открыть indexeddb.'));
+    request.onblocked = () => finish(reject, new Error('indexeddb заблокирована другим окном.'));
   });
 }
 
 function idbRequest(request) {
   return new Promise((resolve, reject) => {
-    if (!request) { reject(new Error('операция IndexedDB недоступна.')); return; }
+    if (!request) { reject(new Error('операция indexeddb недоступна.')); return; }
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error('ошибка IndexedDB.'));
+    request.onerror = () => reject(request.error || new Error('ошибка indexeddb.'));
   });
 }
 
@@ -201,7 +225,7 @@ async function readProjects() {
     storedMeta = meta && typeof meta === 'object' ? meta : null;
     return normalizeProjectList(result);
   } catch (error) {
-    throw error instanceof Error ? error : new Error('не удалось прочитать IndexedDB.');
+    throw error instanceof Error ? error : new Error('не удалось прочитать indexeddb.');
   }
 }
 
@@ -215,8 +239,8 @@ async function persistAll(items, nextRevision = revision + 1, savedAt = new Date
   transaction.objectStore(META_STORE_NAME).put({ id: 'state', schemaVersion: MIRROR_SCHEMA_VERSION, revision: nextRevision, savedAt });
   await new Promise((resolve, reject) => {
     transaction.oncomplete = resolve;
-    transaction.onerror = () => reject(transaction.error || new Error('не удалось записать IndexedDB.'));
-    transaction.onabort = () => reject(transaction.error || new Error('запись IndexedDB прервана.'));
+    transaction.onerror = () => reject(transaction.error || new Error('не удалось записать indexeddb.'));
+    transaction.onabort = () => reject(transaction.error || new Error('запись indexeddb прервана.'));
   });
   return true;
 }
@@ -242,7 +266,7 @@ function commitProjects(items) {
       if (idbError) {
         throw new Error(`не удалось сохранить данные: ${mirrorError?.message || 'локальное хранилище недоступно.'}`);
       }
-      throw new Error(`данные записаны в IndexedDB, но зеркало недоступно: ${mirrorError?.message || 'ошибка локального хранилища.'}`);
+      throw new Error(`данные записаны в indexeddb, но зеркало недоступно: ${mirrorError?.message || 'ошибка локального хранилища.'}`);
     }
     projects = normalized;
     revision = nextRevision;
@@ -277,7 +301,7 @@ function stableProjectsJson(items) {
 function chooseStoredProjects(stored, mirror) {
   const storedItems = normalizeProjectList(stored);
   const mirrorItems = normalizeProjectList(mirror.projects);
-  if (!storedItems.length && !mirrorItems.length) return { projects: [], source: 'none' };
+  if (!storedItems.length && !mirrorItems.length) return { projects: [], source: storedMeta || mirror.savedAt ? 'mirror' : 'none' };
   if (!storedItems.length) return { projects: mirrorItems, source: 'mirror' };
   if (!mirrorItems.length) return { projects: storedItems, source: 'stored' };
   const storedRevision = Number.isFinite(Number(storedMeta?.revision)) ? Number(storedMeta.revision) : 0;
@@ -292,11 +316,6 @@ function chooseStoredProjects(stored, mirror) {
   if (storedTime > mirrorTime) return { projects: storedItems, source: 'stored' };
   if (mirrorTime > storedTime) return { projects: mirrorItems, source: 'mirror' };
   return storedMeta ? { projects: storedItems, source: 'stored' } : { projects: mirrorItems, source: 'mirror' };
-}
-
-function ageInDays(project) {
-  if (!validDate(project?.updatedAt)) return 0;
-  return Math.max(0, Math.floor((Date.now() - new Date(project.updatedAt).getTime()) / 86400000));
 }
 
 function toInputDate(dateValue) {
@@ -316,12 +335,12 @@ function escapeHtml(value) { return String(value).replace(/[&<>"']/g, (char) => 
 
 function render() {
   const visible = filterAndSortProjects(projects, { filter: activeFilter, query: searchQuery, sort: sortMode });
-  refs.layer.replaceChildren();
+  const existing = new Map([...refs.layer.children].map((button) => [button.dataset.id, button]));
   refs.empty.hidden = visible.length > 0;
   refs.layer.hidden = visible.length === 0;
   const isFiltered = activeFilter !== 'all' || Boolean(searchQuery.trim());
   if (refs.emptyTitle) refs.emptyTitle.textContent = isFiltered ? 'в этом срезе пусто' : 'посадите первый проект';
-  if (refs.emptyCopy) refs.emptyCopy.textContent = isFiltered ? 'снимите фильтр или измените запрос — остальные растения останутся на месте.' : 'добавьте растение вручную или импортируйте JSON. сад сохранится в этом браузере.';
+  if (refs.emptyCopy) refs.emptyCopy.textContent = isFiltered ? 'снимите фильтр или измените запрос — остальные растения останутся на месте.' : 'добавьте растение вручную или импортируйте json. сад сохранится в этом браузере.';
   if (refs.clearFilter) refs.clearFilter.hidden = !isFiltered;
   if (refs.clearSearch) refs.clearSearch.hidden = !searchQuery;
   if (refs.search && refs.search.value !== searchQuery) refs.search.value = searchQuery;
@@ -337,18 +356,43 @@ function render() {
     selectedId = null;
     isNewProject = false;
   }
-  visible.forEach((project) => {
-    const button = document.createElement('button');
-    button.className = `plant-button${selectedId === project.id ? ' is-selected' : ''}`;
-    button.type = 'button';
-    button.dataset.id = project.id;
+  const now = Date.now();
+  visible.forEach((project, index) => {
+    let button = existing.get(project.id);
+    if (!button) {
+      button = document.createElement('button');
+      button.className = 'plant-button is-entering';
+      button.type = 'button';
+      button.dataset.id = project.id;
+      button.style.setProperty('--wind-duration', `${6 + (index % 5) * 1.3}s`);
+      button.style.setProperty('--wind-delay', `${-index * 1.7}s`);
+      button.addEventListener('click', () => selectProject(project.id));
+      button.addEventListener('animationend', (event) => { if (event.animationName === 'plant-arrive') button.classList.remove('is-entering'); });
+      if (plantObserver) plantObserver.observe(button);
+      else button.classList.add('is-in-view');
+    }
+    existing.delete(project.id);
+    button.classList.toggle('is-selected', selectedId === project.id);
+    button.setAttribute('aria-pressed', String(selectedId === project.id));
+    button.title = project.name || 'новое растение';
     button.setAttribute('aria-label', `${project.name}, ${STATUS_LABELS[project.status]}, обновлено ${formatDate(project.updatedAt)}`);
-    button.innerHTML = `<span class="plant-figure">${botanicalPlantSvg(project)}<span class="plant-label">${escapeHtml(project.name)}</span><span class="plant-state">${escapeHtml(STATUS_SHORT[project.status])}</span><span class="plant-age">${escapeHtml(formatDate(project.updatedAt))} · ${escapeHtml(relativeAge(project))}</span></span>`;
-    const sceneSvg = button.querySelector('svg');
-    if (sceneSvg) { sceneSvg.setAttribute('aria-hidden', 'true'); sceneSvg.removeAttribute('role'); sceneSvg.removeAttribute('aria-label'); sceneSvg.querySelector('title')?.remove(); }
-    button.addEventListener('click', () => selectProject(project.id, button));
-    refs.layer.append(button);
+    // Round the clock to a day: background refreshes do not restart wind animation.
+    const growth = growthProfile(project, now);
+    const specimen = { ...project, growthDays: Math.floor(growth.days), growthStartedAt: new Date(now).toISOString() };
+    const state = project.status === 'active' ? growth.label : project.status === 'sleeping' ? 'на паузе' : 'гербарий';
+    const markup = `<span class="plant-figure"><span class="plant-index">${String(index + 1).padStart(2, '0')}</span><span class="plant-art">${botanicalPlantSvg(specimen, false, now)}</span><span class="plant-label">${escapeHtml(project.name || 'новое растение')}</span><span class="plant-state">${escapeHtml(state)}</span><span class="plant-age">${escapeHtml(growth.speciesLabel)} · ${Math.floor(growth.days)} дн. роста</span></span>`;
+    if (button._markup !== markup) {
+      button.innerHTML = markup;
+      button._markup = markup;
+      const sceneSvg = button.querySelector('svg');
+      sceneSvg.setAttribute('aria-hidden', 'true');
+      sceneSvg.removeAttribute('role');
+      sceneSvg.removeAttribute('aria-label');
+      sceneSvg.querySelector('title')?.remove();
+    }
+    if (refs.layer.children[index] !== button) refs.layer.insertBefore(button, refs.layer.children[index] || null);
   });
+  existing.forEach((button) => { plantObserver?.unobserve(button); button.remove(); });
   refs.count.textContent = isFiltered
     ? `${visible.length} из ${projects.length} ${pluralize(projects.length, 'растение', 'растения', 'растений')}`
     : `${projects.length} ${pluralize(projects.length, 'растение', 'растения', 'растений')}`;
@@ -360,6 +404,7 @@ function render() {
   refs.filterCounts.archived.textContent = String(counts.archived);
   refs.filters.forEach((filter) => filter.classList.toggle('is-active', filter.dataset.filter === activeFilter));
   refs.filters.forEach((filter) => filter.setAttribute('aria-pressed', String(filter.dataset.filter === activeFilter)));
+  refs.sceneDate.textContent = new Date(now).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   renderInspector();
 }
 
@@ -369,13 +414,12 @@ function pluralize(value, one, few, many) {
   switch (value % 10) { case 1: return one; case 2: case 3: case 4: return few; default: return many; }
 }
 
-function selectProject(id, trigger) {
+function selectProject(id) {
   if (isNewProject && selectedId && selectedId !== id) projects = projects.filter((item) => item.id !== selectedId);
   selectedId = id;
   isNewProject = false;
   render();
-  refs.name.focus({ preventScroll: true });
-  if (trigger) trigger.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  if (globalThis.matchMedia?.('(max-width: 900px)').matches) refs.form.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() || !motionEnabled ? 'auto' : 'smooth' });
 }
 
 function prefersReducedMotion() {
@@ -388,11 +432,26 @@ function renderInspector() {
     refs.form.hidden = true;
     refs.inspectorEmpty.hidden = false;
     refs.panelIndex.textContent = '';
+    inspectorKey = '';
     return;
   }
+  const key = JSON.stringify(project);
+  const growth = growthProfile(project);
+  const previewKey = `${project.id}:${project.status}:${project.color}:${Math.floor(growth.days)}`;
+  if (refs.preview.dataset.key !== previewKey) {
+    refs.preview.innerHTML = botanicalPlantSvg(project, true);
+    refs.preview.dataset.key = previewKey;
+  }
+  refs.species.textContent = growth.speciesLabel;
+  refs.growthStage.textContent = project.status === 'archived' ? 'гербарий' : project.status === 'sleeping' ? 'рост на паузе' : growth.label;
+  refs.growthDays.textContent = `${Math.floor(growth.days)} дн. активного роста`;
+  refs.growthFill.style.width = `${Math.min(100, growth.days / 90 * 100)}%`;
+  refs.statusAge.textContent = `${formatDate(project.updatedAt)} · ${relativeAge(project)}`;
+  if (key === inspectorKey) return;
+  inspectorKey = key;
   refs.form.hidden = false;
   refs.inspectorEmpty.hidden = true;
-  refs.panelIndex.textContent = '';
+  refs.panelIndex.textContent = String(projects.findIndex((item) => item.id === project.id) + 1).padStart(2, '0');
   refs.id.value = project.id;
   refs.name.value = project.name;
   refs.description.value = project.description;
@@ -401,7 +460,6 @@ function renderInspector() {
   refs.updated.value = toInputDate(project.updatedAt);
   refs.note.value = project.note;
   refs.nextStep.value = project.nextStep;
-  refs.preview.innerHTML = botanicalPlantSvg(project, true);
   refs.statusCopy.textContent = STATUS_SHORT[project.status];
   refs.statusAge.textContent = `${formatDate(project.updatedAt)} · ${relativeAge(project)}`;
   refs.statusMarker.style.color = project.status === 'sleeping' ? 'var(--ochre)' : project.status === 'archived' ? 'var(--terracotta)' : 'var(--moss)';
@@ -409,6 +467,8 @@ function renderInspector() {
 }
 
 function openNewProject() {
+  activeFilter = 'all';
+  searchQuery = '';
   if (isNewProject && selectedId) {
     projects = projects.filter((item) => item.id !== selectedId);
   }
@@ -427,7 +487,7 @@ function duplicateSelected() {
   const source = projects.find((item) => item.id === selectedId);
   if (!source) return;
   if (isNewProject && selectedId) projects = projects.filter((item) => item.id !== selectedId);
-  const duplicate = normalizeProject({ ...source, id: uid(), name: `${source.name} — копия`.slice(0, 60), updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() });
+  const duplicate = normalizeProject({ ...source, id: uid(), name: `${source.name} — копия`.slice(0, 60), updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(), growthDays: 0, growthStartedAt: new Date().toISOString() });
   projects.push(duplicate);
   selectedId = duplicate.id;
   isNewProject = true;
@@ -458,6 +518,7 @@ async function saveForm(event) {
     nextStep: refs.nextStep.value,
     updatedAt: fromInputDate(refs.updated.value),
     createdAt: project?.createdAt || new Date().toISOString(),
+    ...transitionGrowth(project || {}, refs.status.value),
   }, refs.id.value);
   const nextProjects = projects.map((item) => item.id === payload.id ? payload : item);
   try {
@@ -512,16 +573,16 @@ async function importFile(file) {
   try {
     if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
       const fileSize = Number(file.size);
-      if (Number.isFinite(fileSize) && fileSize > MAX_JSON_BYTES) throw new Error('JSON больше 5 МБ. выберите файл поменьше.');
+      if (Number.isFinite(fileSize) && fileSize > MAX_JSON_BYTES) throw new Error('json больше 5 МБ. выберите файл поменьше.');
       const source = typeof file.slice === 'function' ? file.slice(0, MAX_JSON_BYTES + 1) : file;
       const text = await source.text();
       let textBytes;
       try { textBytes = typeof TextEncoder === 'function' ? new TextEncoder().encode(text).byteLength : text.length; } catch { textBytes = text.length; }
-      if (textBytes > MAX_JSON_BYTES) throw new Error('JSON слишком большой.');
+      if (textBytes > MAX_JSON_BYTES) throw new Error('json слишком большой.');
       let data;
-      try { data = JSON.parse(text); } catch { throw new Error('JSON повреждён или имеет неверный формат.'); }
+      try { data = JSON.parse(text); } catch { throw new Error('json повреждён или имеет неверный формат.'); }
       const parsed = parseProjectPayload(data, { byteLength: Number.isFinite(fileSize) ? fileSize : textBytes });
-      if (!parsed.projects.length) throw new Error('в JSON нет подходящих проектов.');
+      if (!parsed.projects.length) throw new Error('в json нет подходящих проектов.');
       const merged = mergeProjects(projects, parsed.projects);
       const result = await commitProjects(merged.projects);
       selectedId = merged.importedIds?.[0] || merged.projects[0]?.id || null;
@@ -531,7 +592,7 @@ async function importFile(file) {
       showToast(result.fallback ? `${suffix} сохранено локально.` : suffix);
     } else if (file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') {
       const fileSize = Number(file.size);
-      if (fileSize > MAX_ZIP_BYTES) throw new Error('ZIP больше 100 МБ. выберите архив поменьше.');
+      if (fileSize > MAX_ZIP_BYTES) throw new Error('zip больше 100 МБ. выберите архив поменьше.');
       const metadata = await readZipMetadata(await file.arrayBuffer(), file.name);
       const project = normalizeProject({
         id: uid(),
@@ -548,10 +609,10 @@ async function importFile(file) {
       const result = await commitProjects(merged.projects);
       selectedId = merged.importedIds?.[0] || project.id;
       isNewProject = false;
-      const suffix = `ZIP прочитан безопасно: ${metadata.files.length} записей; пропущено: ${metadata.truncated}.`;
+      const suffix = `zip прочитан безопасно: ${metadata.files.length} записей; пропущено: ${metadata.truncated}.`;
       showToast(result.fallback ? `${suffix} сохранено локально.` : suffix);
     } else {
-      throw new Error('поддерживаются только JSON и ZIP.');
+      throw new Error('поддерживаются только json и zip.');
     }
     render();
   } catch (error) {
@@ -566,23 +627,23 @@ async function importFile(file) {
 }
 
 function readZipMetadata(arrayBuffer, filename) {
-  if (!arrayBuffer || !Number.isFinite(arrayBuffer.byteLength) || arrayBuffer.byteLength > MAX_ZIP_BYTES) throw new Error('ZIP больше 100 МБ. выберите архив поменьше.');
+  if (!arrayBuffer || !Number.isFinite(arrayBuffer.byteLength) || arrayBuffer.byteLength > MAX_ZIP_BYTES) throw new Error('zip больше 100 МБ. выберите архив поменьше.');
   const bytes = new Uint8Array(arrayBuffer);
-  if (bytes.length < 22) throw new Error('не найден каталог ZIP. архив повреждён или использует ZIP64.');
+  if (bytes.length < 22) throw new Error('не найден каталог zip. архив повреждён или использует zip64.');
   const view = new DataView(arrayBuffer);
   const minOffset = Math.max(0, bytes.length - 65557);
   let eocd = -1;
   for (let offset = bytes.length - 22; offset >= minOffset; offset -= 1) {
     if (view.getUint32(offset, true) === 0x06054b50) { eocd = offset; break; }
   }
-  if (eocd < 0 || eocd + 22 > bytes.length) throw new Error('не найден каталог ZIP. архив повреждён или использует ZIP64.');
+  if (eocd < 0 || eocd + 22 > bytes.length) throw new Error('не найден каталог zip. архив повреждён или использует zip64.');
   const commentLength = view.getUint16(eocd + 20, true);
-  if (eocd + 22 + commentLength > bytes.length) throw new Error('комментарий ZIP выходит за границы архива.');
+  if (eocd + 22 + commentLength > bytes.length) throw new Error('комментарий zip выходит за границы архива.');
   const entries = view.getUint16(eocd + 10, true);
   const directorySize = view.getUint32(eocd + 12, true);
   const directoryOffset = view.getUint32(eocd + 16, true);
   const directoryEnd = directoryOffset + directorySize;
-  if (entries > MAX_ZIP_ENTRIES || directoryOffset > bytes.length || directoryEnd > bytes.length || directoryEnd > eocd) throw new Error('ZIP содержит слишком много или повреждённых записей.');
+  if (entries > MAX_ZIP_ENTRIES || directoryOffset > bytes.length || directoryEnd > bytes.length || directoryEnd > eocd) throw new Error('zip содержит слишком много или повреждённых записей.');
   const decoder = new TextDecoder('utf-8', { fatal: true });
   const files = [];
   const names = new Set();
@@ -590,28 +651,28 @@ function readZipMetadata(arrayBuffer, filename) {
   let totalBytes = 0;
   let cursor = directoryOffset;
   for (let index = 0; index < entries; index += 1) {
-    if (cursor + 46 > directoryEnd || view.getUint32(cursor, true) !== 0x02014b50) throw new Error('каталог ZIP повреждён.');
+    if (cursor + 46 > directoryEnd || view.getUint32(cursor, true) !== 0x02014b50) throw new Error('каталог zip повреждён.');
     const centralCursor = cursor;
     const compressedSize = view.getUint32(cursor + 20, true);
     const uncompressedSize = view.getUint32(cursor + 24, true);
-    if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff) throw new Error('ZIP64-архивы не поддерживаются.');
+    if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff) throw new Error('zip64-архивы не поддерживаются.');
     totalBytes += uncompressedSize;
-    if (totalBytes > MAX_ZIP_UNCOMPRESSED_BYTES) throw new Error('распакованный размер ZIP больше 500 МБ.');
+    if (totalBytes > MAX_ZIP_UNCOMPRESSED_BYTES) throw new Error('распакованный размер zip больше 500 МБ.');
     const nameLength = view.getUint16(cursor + 28, true);
     const extraLength = view.getUint16(cursor + 30, true);
     const commentLen = view.getUint16(cursor + 32, true);
     const nameStart = cursor + 46;
     const nextCursor = nameStart + nameLength + extraLength + commentLen;
-    if (nextCursor > directoryEnd || nextCursor > eocd) throw new Error('имя записи ZIP выходит за границы каталога.');
+    if (nextCursor > directoryEnd || nextCursor > eocd) throw new Error('имя записи zip выходит за границы каталога.');
     let name;
-    try { name = decoder.decode(bytes.slice(nameStart, nameStart + nameLength)); } catch { throw new Error('имя записи ZIP имеет неверную кодировку.'); }
+    try { name = decoder.decode(bytes.slice(nameStart, nameStart + nameLength)); } catch { throw new Error('имя записи zip имеет неверную кодировку.'); }
     // Verify each local record stays before the central directory; no payload is decompressed.
     const localOffset = view.getUint32(centralCursor + 42, true);
-    if (localOffset + 30 > directoryOffset || localOffset + 30 > bytes.length || view.getUint32(localOffset, true) !== 0x04034b50) throw new Error('локальная запись ZIP повреждена.');
+    if (localOffset + 30 > directoryOffset || localOffset + 30 > bytes.length || view.getUint32(localOffset, true) !== 0x04034b50) throw new Error('локальная запись zip повреждена.');
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
     const localDataEnd = localOffset + 30 + localNameLength + localExtraLength + compressedSize;
-    if (localDataEnd > directoryOffset || localDataEnd > bytes.length) throw new Error('данные записи ZIP выходят за границы архива.');
+    if (localDataEnd > directoryOffset || localDataEnd > bytes.length) throw new Error('данные записи zip выходят за границы архива.');
     cursor = nextCursor;
     const modifiedAt = dosDateTimeToIso(view.getUint16(centralCursor + 14, true), view.getUint16(centralCursor + 12, true));
     const normalized = normalizeFile({ name, extension: extensionOf(name), size: uncompressedSize, modifiedAt });
@@ -620,7 +681,7 @@ function readZipMetadata(arrayBuffer, filename) {
     if (files.length >= MAX_ZIP_FILES) { truncated += 1; continue; }
     files.push(normalized);
   }
-  if (cursor !== directoryEnd) throw new Error('границы каталога ZIP не совпадают.');
+  if (cursor !== directoryEnd) throw new Error('границы каталога zip не совпадают.');
   const newest = files.map((file) => file.modifiedAt).filter(Boolean).sort().pop();
   return { name: String(filename || 'архив').replace(/\.zip$/i, ''), files, totalBytes, truncated, updatedAt: newest || new Date().toISOString() };
 }
@@ -654,61 +715,87 @@ function exportJson() {
   try {
     const payload = { schemaVersion: MIRROR_SCHEMA_VERSION, exportedAt: new Date().toISOString(), revision, projects: normalizeProjectList(projects) };
     downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `project-garden-${new Date().toISOString().slice(0, 10)}.json`);
-    showToast('JSON сохранён в загрузки.');
+    showToast('json сохранён в загрузки.');
   } catch (error) {
-    showToast(`не удалось сохранить JSON: ${error?.message || 'ошибка скачивания.'}`);
+    showToast(`не удалось сохранить json: ${error?.message || 'ошибка скачивания.'}`);
   }
 }
 
-function exportPng() {
-  const sorted = filterAndSortProjects(projects, { filter: activeFilter, query: searchQuery, sort: sortMode });
-  const canvas = document.createElement('canvas');
-  const columns = Math.min(5, Math.max(1, sorted.length));
-  const rows = Math.max(1, Math.ceil(sorted.length / columns));
-  canvas.width = 1400; canvas.height = 260 + rows * 250;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) { showToast('не удалось подготовить PNG в этом браузере.'); return; }
-  ctx.fillStyle = '#f5f0e6'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = '#d9d3c6'; ctx.lineWidth = 1; ctx.strokeRect(48, 48, canvas.width - 96, canvas.height - 96);
-  ctx.fillStyle = '#2f322c'; ctx.font = '600 54px Georgia'; ctx.fillText('сад проектов', 90, 140);
-  ctx.fillStyle = '#73766c'; ctx.font = '14px monospace'; ctx.fillText(`${sorted.length} растений · ${new Date().toLocaleDateString('ru-RU')}`, 94, 176);
-  const cellWidth = 1220 / columns;
-  sorted.forEach((project, index) => {
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-    const ground = 235 + row * 250;
-    if (column === 0) {
-      ctx.strokeStyle = '#445344'; ctx.beginPath(); ctx.moveTo(90, ground + 20); ctx.lineTo(1310, ground + 20); ctx.stroke();
-      ctx.fillStyle = '#d8c5aa'; ctx.fillRect(90, ground + 22, 1220, 120);
-    }
-    drawCanvasPlant(ctx, project, 90 + cellWidth * (column + 0.5), ground);
-  });
-  canvas.toBlob((blob) => {
-    if (!blob) { showToast('не удалось подготовить PNG в этом браузере.'); return; }
-    try {
-      downloadBlob(blob, `project-garden-${new Date().toISOString().slice(0, 10)}.png`);
-      showToast('снимок PNG сохранён.');
-    } catch (error) {
-      showToast(`не удалось сохранить PNG: ${error?.message || 'ошибка скачивания.'}`);
-    }
-  }, 'image/png');
+async function exportPng() {
+  refs.exportPng.disabled = true;
+  try {
+    const sorted = filterAndSortProjects(projects, { filter: activeFilter, query: searchQuery, sort: sortMode });
+    const blob = await gardenPng(sorted);
+    downloadBlob(blob, `project-garden-${new Date().toISOString().slice(0, 10)}.png`);
+    showToast('снимок png сохранён.');
+  } catch (error) {
+    showToast(`не удалось сохранить png: ${error?.message || 'ошибка скачивания.'}`);
+  } finally {
+    refs.exportPng.disabled = false;
+  }
 }
 
-function drawCanvasPlant(ctx, project, x, ground) {
-  const color = project.color;
-  ctx.save(); ctx.translate(x, ground);
-  ctx.strokeStyle = '#2f322c'; ctx.lineWidth = 3; ctx.beginPath();
-  if (project.status === 'sleeping') { ctx.moveTo(0, 0); ctx.quadraticCurveTo(-7, -80, -36, -130); }
-  else { ctx.moveTo(0, 0); ctx.lineTo(project.status === 'archived' ? 8 : 0, -150); }
-  ctx.stroke();
-  const leaf = (lx, ly, rot, opacity = 1) => { ctx.save(); ctx.translate(lx, ly); ctx.rotate(rot); ctx.globalAlpha = opacity; ctx.fillStyle = color; ctx.strokeStyle = '#2f322c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); };
-  if (project.status === 'archived') { leaf(-9, -90, -0.5, 0.35); leaf(11, -120, 0.5, 0.25); leaf(7, -150, 0, 0.3); }
-  else { leaf(-18, -68, -0.4, project.status === 'sleeping' ? 0.55 : 0.95); leaf(18, -95, 0.45, project.status === 'sleeping' ? 0.5 : 0.95); leaf(-17, -122, -0.5, project.status === 'sleeping' ? 0.4 : 0.85); leaf(12, -148, 0.45, 0.85); }
-  ctx.restore();
-  ctx.fillStyle = '#2f322c'; ctx.font = '600 15px Georgia'; ctx.textAlign = 'center'; ctx.fillText(project.name.slice(0, 20), x, ground + 40); ctx.fillStyle = '#73766c'; ctx.font = '11px monospace'; ctx.fillText(STATUS_SHORT[project.status], x, ground + 58);
+function updateMotion() {
+  const reduced = prefersReducedMotion();
+  document.documentElement.dataset.motion = motionEnabled && !reduced ? 'on' : 'off';
+  refs.motionToggle.setAttribute('aria-pressed', String(motionEnabled && !reduced));
+  refs.motionToggle.textContent = reduced ? 'движение уменьшено ≈' : motionEnabled ? 'ветер включён ≈' : 'ветер выключен ≈';
+  refs.motionToggle.disabled = reduced;
+  refs.motionToggle.title = reduced ? 'следуем настройке уменьшения движения в вашей системе' : 'включить или выключить анимацию растений';
+}
+
+function openGrowthPreview() {
+  growthPreviewProject = projects.find((project) => project.id === selectedId);
+  if (!growthPreviewProject) return;
+  refs.growthSpecimen.replaceChildren();
+  refs.growthProjectName.textContent = growthPreviewProject.name || 'новое растение';
+  refs.growthSlider.value = String(Math.min(90, Math.floor(growthProfile(growthPreviewProject).days)));
+  renderGrowthPreview();
+  refs.growthDialog.showModal();
+}
+
+function renderGrowthPreview() {
+  if (!growthPreviewProject) return;
+  const days = Number(refs.growthSlider.value);
+  const now = Date.now();
+  const specimen = { ...growthPreviewProject, status: 'active', growthDays: days, growthStartedAt: new Date(now).toISOString() };
+  const variant = `${growthProfile(specimen, now).tier}:${days < 4}`;
+  const template = document.createElement('template');
+  template.innerHTML = botanicalPlantSvg(specimen, false, now);
+  const nextSvg = template.content.firstElementChild;
+  const currentSvg = refs.growthSpecimen.firstElementChild;
+  if (currentSvg && refs.growthSpecimen.dataset.variant === variant) {
+    currentSvg.querySelector('.plant-growth').setAttribute('transform', nextSvg.querySelector('.plant-growth').getAttribute('transform'));
+  } else {
+    refs.growthSpecimen.replaceChildren(nextSvg);
+    if (motionEnabled && !prefersReducedMotion()) nextSvg.animate([{ opacity: .45, transform: 'translateY(3px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 400, easing: 'ease-out' });
+  }
+  refs.growthSpecimen.dataset.variant = variant;
+  refs.growthPreviewStage.textContent = growthProfile(specimen, now).label;
+  refs.growthPreviewDays.textContent = `${days} ${pluralize(days, 'день', 'дня', 'дней')}`;
 }
 
 function bindEvents() {
+  try { motionEnabled = localStorage.getItem('project-garden-motion') !== 'off'; } catch { /* use system setting */ }
+  updateMotion();
+  globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').addEventListener('change', updateMotion);
+  refs.motionToggle.addEventListener('click', () => {
+    motionEnabled = !motionEnabled;
+    try { localStorage.setItem('project-garden-motion', motionEnabled ? 'on' : 'off'); } catch { /* works for this visit */ }
+    updateMotion();
+  });
+  refs.previewGrowth.addEventListener('click', openGrowthPreview);
+  refs.closeGrowth.addEventListener('click', () => refs.growthDialog.close());
+  refs.growthSlider.addEventListener('input', renderGrowthPreview);
+  refs.growthDialog.addEventListener('click', (event) => {
+    if (event.target !== refs.growthDialog) return;
+    const rect = refs.growthDialog.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) refs.growthDialog.close();
+  });
+  document.addEventListener('visibilitychange', () => {
+    document.documentElement.dataset.pageVisible = String(!document.hidden);
+    if (!document.hidden) render();
+  });
   refs.add.addEventListener('click', openNewProject);
   refs.emptyAdd.addEventListener('click', openNewProject);
   refs.clearFilter?.addEventListener('click', () => { activeFilter = 'all'; searchQuery = ''; render(); refs.search?.focus(); });
@@ -723,9 +810,8 @@ function bindEvents() {
   refs.search?.addEventListener('input', (event) => { searchQuery = event.target.value; render(); });
   refs.clearSearch?.addEventListener('click', () => { searchQuery = ''; if (refs.search) refs.search.value = ''; render(); refs.search?.focus(); });
   refs.sort?.addEventListener('change', (event) => { sortMode = event.target.value; render(); });
-  refs.clearFilter?.addEventListener('click', () => { activeFilter = 'all'; searchQuery = ''; if (refs.search) refs.search.value = ''; render(); });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && selectedId) {
+    if (event.key === 'Escape' && selectedId && !refs.growthDialog.open) {
       if (isNewProject) projects = projects.filter((item) => item.id !== selectedId);
       selectedId = null;
       isNewProject = false;
@@ -737,9 +823,10 @@ function bindEvents() {
 
 async function init() {
   bindEvents();
-  try { db = await openDatabase(); } catch { db = null; showToast('IndexedDB недоступна — временно использую локальное хранилище.'); }
+  refs.emptySpecimen.innerHTML = botanicalPlantSvg({ id: 'b', color: '#718b6a', growthDays: 55, growthStartedAt: new Date().toISOString() }, true);
+  try { db = await openDatabase(); } catch { db = null; showToast('indexeddb недоступна — временно использую локальное хранилище.'); }
   let stored = [];
-  try { stored = await readProjects(); } catch { db = null; showToast('не удалось прочитать IndexedDB — использую локальное зеркало.'); }
+  try { stored = await readProjects(); } catch { db = null; showToast('не удалось прочитать indexeddb — использую локальное зеркало.'); }
   const mirror = readMirror();
   const chosen = chooseStoredProjects(stored, mirror);
   if (chosen.source === 'none') {
@@ -759,6 +846,7 @@ async function init() {
     }
   }
   render();
+  window.setInterval(() => { if (!document.hidden) render(); }, 60000);
 }
 
 init();

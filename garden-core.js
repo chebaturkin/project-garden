@@ -73,6 +73,14 @@ export function normalizeProject(raw = {}, forcedId) {
   const statusValue = source.status === 'dormant' ? 'sleeping' : source.status;
   const status = STATUS_ORDER.includes(statusValue) ? statusValue : 'active';
   const updatedAt = validDate(source.updatedAt) ? new Date(source.updatedAt).toISOString() : new Date().toISOString();
+  const createdAt = validDate(source.createdAt) ? new Date(source.createdAt).toISOString() : updatedAt;
+  let growthDays;
+  try { growthDays = Number(source.growthDays); } catch { growthDays = NaN; }
+  if (source.growthDays == null || !Number.isFinite(growthDays)) {
+    growthDays = status === 'active' ? 0 : Math.max(0, (new Date(updatedAt) - new Date(createdAt)) / DAY);
+  }
+  growthDays = Math.min(36500, Math.max(0, growthDays));
+  const growthStartedAt = validDate(source.growthStartedAt) ? new Date(source.growthStartedAt).toISOString() : status === 'active' ? createdAt : updatedAt;
   const files = Array.isArray(source.files) ? source.files.slice(0, MAX_ZIP_FILES).map(normalizeFile).filter(Boolean) : [];
   return {
     id,
@@ -85,7 +93,9 @@ export function normalizeProject(raw = {}, forcedId) {
     nextStep: text(source.nextStep || source.next_step).trim().slice(0, 120),
     files,
     source: text(source.source).trim().toLowerCase() === 'zip' ? 'zip' : 'manual',
-    createdAt: validDate(source.createdAt) ? new Date(source.createdAt).toISOString() : updatedAt,
+    createdAt,
+    growthDays,
+    growthStartedAt,
   };
 }
 

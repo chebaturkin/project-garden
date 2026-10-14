@@ -1,5 +1,6 @@
 const DAY = 86400000;
 const SPECIES = ['shrub', 'fern', 'flower', 'tree'];
+const SPECIES_LABELS = ['куст', 'папоротник', 'космея', 'дерево'];
 const STATUS_LABELS = { active: 'активный рост', sleeping: 'в спячке', archived: 'в архиве' };
 const FALLBACK_ACCENT = '#718b6a';
 const STEM = '#5d745f';
@@ -10,6 +11,38 @@ const DRY = '#a28e67';
 const DRY_DARK = '#7f6d50';
 const SEED = '#c5a979';
 const GOLD = '#d6ad62';
+
+function timeOf(value) {
+  if (value == null || value === '') return NaN;
+  try { return new Date(value).getTime(); } catch { return NaN; }
+}
+
+/** Accumulated active days; editing a project's notes never resets its age. */
+export function growthProfile(project = {}, now = Date.now()) {
+  const current = timeOf(now);
+  const created = timeOf(project.createdAt ?? project.updatedAt);
+  const updated = timeOf(project.updatedAt);
+  let accumulated;
+  try { accumulated = Number(project.growthDays); } catch { accumulated = NaN; }
+  if (project.growthDays == null || !Number.isFinite(accumulated)) {
+    accumulated = project.status === 'sleeping' || project.status === 'archived' ? Math.max(0, (updated - created) / DAY) : 0;
+  }
+  accumulated = Number.isFinite(accumulated) ? Math.max(0, accumulated) : 0;
+  const started = timeOf(project.growthStartedAt ?? project.createdAt ?? project.updatedAt);
+  const elapsed = project.status === 'sleeping' || project.status === 'archived' || !Number.isFinite(started) || !Number.isFinite(current) ? 0 : Math.max(0, (current - started) / DAY);
+  const days = Math.min(36500, accumulated + elapsed);
+  const tier = days < 14 ? 'young' : days < 45 ? 'established' : 'mature';
+  const progress = tier === 'young' ? days / 14 : tier === 'established' ? (days - 14) / 31 : Math.min(1, (days - 45) / 45);
+  const speciesIndex = hashId(String(project.id ?? ''));
+  return { days, tier, progress, label: tier === 'young' ? 'росток' : tier === 'established' ? 'набирает силу' : 'зрелое растение', species: SPECIES[speciesIndex], speciesLabel: SPECIES_LABELS[speciesIndex] };
+}
+
+export function transitionGrowth(project, nextStatus, now = Date.now()) {
+  if (project.status === nextStatus && Number.isFinite(project.growthDays) && Number.isFinite(timeOf(project.growthStartedAt))) {
+    return { growthDays: project.growthDays, growthStartedAt: project.growthStartedAt };
+  }
+  return { growthDays: growthProfile(project, now).days, growthStartedAt: new Date(now).toISOString() };
+}
 
 /**
  * Render a project as a small, flat botanical illustration.
@@ -24,8 +57,8 @@ export function plantSvg(project = {}, compact = false, now = Date.now()) {
   const accent = safeColor(project?.color);
   const name = String(project?.name ?? '').trim() || 'без названия';
   const title = `${name}: ${STATUS_LABELS[status]}`;
-  const age = projectAge(project?.updatedAt, now);
-  const ageTier = age < 14 ? 'young' : age <= 45 ? 'established' : 'mature';
+  const growth = growthProfile(project, now);
+  const ageTier = growth.tier;
   const classes = `plant-svg${compact ? ' compact' : ''}`;
   const attrs = [
     `class="${classes}"`,
@@ -41,9 +74,13 @@ export function plantSvg(project = {}, compact = false, now = Date.now()) {
   let body;
   if (status === 'sleeping') body = renderSleeping(speciesIndex, accent);
   else if (status === 'archived') body = renderArchived(speciesIndex, accent);
-  else body = renderActive(speciesIndex, ageTier, accent);
+  else body = growth.days < 4 ? renderSprout(accent, speciesIndex) : renderActive(speciesIndex, ageTier, accent);
 
-  return `<svg ${attrs}><title>${escapeSvg(title)}</title>${body}</svg>`;
+  const sizeProgress = Math.min(1, growth.days / 90);
+  const scaleY = status === 'active' ? (0.83 + sizeProgress * 0.17).toFixed(3) : '1';
+  const scaleX = status === 'active' ? (0.92 + sizeProgress * 0.08).toFixed(3) : '1';
+  const roots = '<g class="plant-roots" fill="none" stroke="#9f8c70" stroke-width="1" opacity=".45"><path d="M120 330v9m0-6-8 6m8-6 8 6m-8-4-3 4"/></g>';
+  return `<svg ${attrs}><title>${escapeSvg(title)}</title>${roots}<g class="plant-sway"><g class="plant-growth" transform="translate(120 330) scale(${scaleX} ${scaleY}) translate(-120 -330)">${body}</g></g></svg>`;
 }
 
 function safeColor(value) {
@@ -66,11 +103,8 @@ function hashId(id) {
   return hash % SPECIES.length;
 }
 
-function projectAge(updatedAt, now) {
-  const updated = new Date(updatedAt).getTime();
-  const current = now instanceof Date ? now.getTime() : Number(now);
-  if (!Number.isFinite(updated) || !Number.isFinite(current)) return 0;
-  return Math.max(0, (current - updated) / DAY);
+function renderSprout(accent, index) {
+  return `<g data-botanical="new-sprout">${stem('M120 330 C117 306 122 288 120 268', 3)}${leaf('M120 297 C99 300 84 290 79 274 C98 271 114 280 120 297Z', accent, .78, leafDetail('M119 294 85 278'))}${leaf('M120 283 C132 266 148 259 161 263 C156 279 141 288 120 283Z', accent, .9, leafDetail('M123 281 154 266'))}${index === 2 ? `<ellipse cx="120" cy="267" rx="4" ry="7" fill="${accent}"/>` : ''}</g>`;
 }
 
 function stem(d, width = 4, color = STEM, opacity = 1) {
@@ -78,7 +112,7 @@ function stem(d, width = 4, color = STEM, opacity = 1) {
 }
 
 function leaf(d, accent, opacity = 0.86, detail = '') {
-  return `<path d="${d}" fill="${accent}" fill-opacity="${opacity}" stroke="${STEM}" stroke-width="1.35" stroke-linejoin="round"/>${detail}`;
+  return `<g class="plant-leaf"><path d="${d}" fill="${accent}" fill-opacity="${opacity}" stroke="${STEM}" stroke-width="1.35" stroke-linejoin="round"/>${detail}</g>`;
 }
 
 function leafDetail(d, opacity = 0.46) {
@@ -143,6 +177,7 @@ function fernFrond(path, leaves, accent, scale = 1) {
   let out = stem(path, 2.3, STEM, 0.95);
   for (const [x, y, angle, size] of leaves) {
     out += leaflet(x, y, angle, size * scale, accent, 0.74);
+    out += leaflet(x, y, angle + 150, size * scale * .72, accent, .6);
   }
   return out;
 }
@@ -182,7 +217,7 @@ function flowerPetal(angle, scale, accent, opacity = 0.9) {
 }
 
 function flowerHead(x, y, scale, accent, tilt = 0) {
-  return `<g data-element="flower" transform="translate(${x} ${y}) rotate(${tilt})">${flowerPetal(0, scale, accent)}${flowerPetal(72, scale, accent, 0.86)}${flowerPetal(144, scale, accent, 0.82)}${flowerPetal(216, scale, accent, 0.86)}${flowerPetal(288, scale, accent, 0.9)}<circle cx="0" cy="0" r="5" fill="${GOLD}" stroke="${STEM_DARK}" stroke-width="1"/></g>`;
+  return `<g data-element="flower" transform="translate(${x} ${y}) rotate(${tilt})">${Array.from({ length: 8 }, (_, i) => flowerPetal(i * 45, scale, accent, .72 + (i % 3) * .08)).join('')}<circle cx="0" cy="0" r="6" fill="${GOLD}" stroke="${STEM_DARK}" stroke-width="1"/><circle cx="-2" cy="-1" r="1" fill="${STEM_DARK}"/><circle cx="2" cy="2" r="1" fill="${STEM_DARK}"/></g>`;
 }
 
 function renderFlower(tier, accent) {

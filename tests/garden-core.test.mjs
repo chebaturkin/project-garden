@@ -109,3 +109,18 @@ test('status counts include all records', () => {
   assert.deepEqual(countByStatus([{ status: 'active' }, { status: 'sleeping' }, { status: 'unknown' }]), { all: 3, active: 1, sleeping: 1, archived: 0 });
   assert.deepEqual(countByStatus(null), { all: 0, active: 0, sleeping: 0, archived: 0 });
 });
+
+test('normalization migrates and preserves botanical clocks through json import', () => {
+  const createdAt = '2026-09-01T00:00:00.000Z';
+  const updatedAt = '2026-09-21T00:00:00.000Z';
+  const legacy = normalizeProject({ id: 'clock', createdAt, updatedAt, status: 'sleeping' });
+  assert.equal(legacy.growthDays, 20);
+  assert.equal(legacy.growthStartedAt, updatedAt);
+  const active = normalizeProject({ id: 'active', createdAt, updatedAt, status: 'active' });
+  assert.equal(active.growthDays, 0);
+  assert.equal(active.growthStartedAt, createdAt);
+  const saved = normalizeProject({ ...active, growthDays: 12.5, growthStartedAt: updatedAt });
+  assert.deepEqual(parseProjectPayload(JSON.parse(JSON.stringify([saved]))).projects, [saved]);
+  assert.equal(normalizeProject({ growthDays: -5 }).growthDays, 0);
+  assert.equal(normalizeProject({ growthDays: Symbol('bad') }).growthDays, 0);
+});
