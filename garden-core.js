@@ -110,13 +110,13 @@ export function formatBytes(value) {
 }
 
 export function formatDate(value) {
-  if (!validDate(value)) return '—';
-  try { return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)).replace('.', ''); } catch { return '—'; }
+  if (!validDate(value)) return '-';
+  try { return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)).replace('.', ''); } catch { return '-'; }
 }
 
 export function relativeAge(projectOrDate, now = new Date()) {
   const value = projectOrDate && typeof projectOrDate === 'object' ? projectOrDate.updatedAt : projectOrDate;
-  if (!validDate(value) || !validDate(now)) return '—';
+  if (!validDate(value) || !validDate(now)) return '-';
   const age = Math.max(0, Math.floor((new Date(now).getTime() - new Date(value).getTime()) / DAY));
   if (age === 0) return 'сегодня';
   if (age === 1) return 'вчера';

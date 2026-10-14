@@ -53,8 +53,8 @@ test('search and sorting cover metadata and files', () => {
 });
 
 test('bad dates are safe and age accepts an explicit clock', () => {
-  assert.equal(core.formatDate('not a date'), '—');
-  assert.equal(relativeAge({ updatedAt: 'not a date' }, now), '—');
+  assert.equal(core.formatDate('not a date'), '-');
+  assert.equal(relativeAge({ updatedAt: 'not a date' }, now), '-');
   assert.equal(relativeAge({ updatedAt: '2026-10-07T00:00:00Z' }, now), 'вчера');
   assert.equal(core.validDate(0), true);
   assert.equal(core.formatDate(0), '01 янв 1970 г.');

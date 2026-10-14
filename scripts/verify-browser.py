@@ -95,7 +95,7 @@ def checks(browser, url):
         page.locator("#project-form button[type=submit]").click()
         expect(page.locator(".plant-button")).to_have_count(4)
         page.locator("#duplicate-project").click()
-        expect(page.locator("#project-name")).to_have_value("новый проект — копия")
+        expect(page.locator("#project-name")).to_have_value("новый проект (копия)")
         expect(page.locator("#growth-days")).to_have_text("0 дн. активного роста")
         page.locator("#project-form button[type=submit]").click()
         expect(page.locator(".plant-button")).to_have_count(5)

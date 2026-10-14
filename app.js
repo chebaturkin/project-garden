@@ -340,7 +340,7 @@ function render() {
   refs.layer.hidden = visible.length === 0;
   const isFiltered = activeFilter !== 'all' || Boolean(searchQuery.trim());
   if (refs.emptyTitle) refs.emptyTitle.textContent = isFiltered ? 'в этом срезе пусто' : 'посадите первый проект';
-  if (refs.emptyCopy) refs.emptyCopy.textContent = isFiltered ? 'снимите фильтр или измените запрос — остальные растения останутся на месте.' : 'добавьте растение вручную или импортируйте json. сад сохранится в этом браузере.';
+  if (refs.emptyCopy) refs.emptyCopy.textContent = isFiltered ? 'снимите фильтр или измените запрос. остальные растения останутся на месте.' : 'добавьте растение вручную или импортируйте json. сад сохранится в этом браузере.';
   if (refs.clearFilter) refs.clearFilter.hidden = !isFiltered;
   if (refs.clearSearch) refs.clearSearch.hidden = !searchQuery;
   if (refs.search && refs.search.value !== searchQuery) refs.search.value = searchQuery;
@@ -487,7 +487,7 @@ function duplicateSelected() {
   const source = projects.find((item) => item.id === selectedId);
   if (!source) return;
   if (isNewProject && selectedId) projects = projects.filter((item) => item.id !== selectedId);
-  const duplicate = normalizeProject({ ...source, id: uid(), name: `${source.name} — копия`.slice(0, 60), updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(), growthDays: 0, growthStartedAt: new Date().toISOString() });
+  const duplicate = normalizeProject({ ...source, id: uid(), name: `${source.name} (копия)`.slice(0, 60), updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(), growthDays: 0, growthStartedAt: new Date().toISOString() });
   projects.push(duplicate);
   selectedId = duplicate.id;
   isNewProject = true;
@@ -824,9 +824,9 @@ function bindEvents() {
 async function init() {
   bindEvents();
   refs.emptySpecimen.innerHTML = botanicalPlantSvg({ id: 'b', color: '#718b6a', growthDays: 55, growthStartedAt: new Date().toISOString() }, true);
-  try { db = await openDatabase(); } catch { db = null; showToast('indexeddb недоступна — временно использую локальное хранилище.'); }
+  try { db = await openDatabase(); } catch { db = null; showToast('indexeddb недоступна. временно использую локальное хранилище.'); }
   let stored = [];
-  try { stored = await readProjects(); } catch { db = null; showToast('не удалось прочитать indexeddb — использую локальное зеркало.'); }
+  try { stored = await readProjects(); } catch { db = null; showToast('не удалось прочитать indexeddb. использую локальное зеркало.'); }
   const mirror = readMirror();
   const chosen = chooseStoredProjects(stored, mirror);
   if (chosen.source === 'none') {

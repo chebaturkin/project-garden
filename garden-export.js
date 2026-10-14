@@ -82,6 +82,6 @@ export async function gardenPng(projects, now = Date.now()) {
   ctx.textAlign = 'left';
   ctx.fillStyle = '#727668';
   ctx.font = 'italic 20px "Cormorant Garamond", Georgia, serif';
-  ctx.fillText('каждому проекту — своё место', 70, height - 60);
+  ctx.fillText('у каждого проекта своё место', 70, height - 60);
   return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('браузер не смог сохранить изображение.')), 'image/png'));
 }
