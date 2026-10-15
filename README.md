@@ -1,16 +1,16 @@
+**english** · [русский](README.ru.md)
+
 # project garden
 
-english · [русский](README.ru.md)
+a garden for projects you want to keep close. give each one a plant, a note and a next step. the plant grows over time, rests on hold and stays in the herbarium when the work is done. the garden is saved in this browser.
 
-a local garden for projects, notes and next steps. every project has a plant: it grows over time, rests on hold and stays in the herbarium when the work is done.
-
-[open the garden ↗](https://chebaturkin.github.io/project-garden/?lang=en) · [открыть по-русски](https://chebaturkin.github.io/project-garden/?lang=ru)
+[open in english ↗](https://chebaturkin.github.io/project-garden/?lang=en) · [open in russian](https://chebaturkin.github.io/project-garden/?lang=ru)
 
 ![five project plants growing in a paper garden bed](docs/images/en/garden.png)
 
 ## using the garden
 
-plant a project, give it a name and leave a next step. choose a plant to open its profile and edit its colour, status, note, description and update date. changes stay in this browser.
+choose “plant a project”, give it a name and leave a next step. selecting a plant opens its profile, where you can change its colour, status, note, description and update date. save the profile to apply those edits.
 
 - search names, descriptions, notes, next steps and file names;
 - filter growing, dormant or archived plants and sort by name, status or update date;
@@ -81,7 +81,7 @@ no build or dependency installation is needed:
 python3 -m http.server 4173
 ```
 
-open the [local garden](http://localhost:4173). javascript modules need a static server, so opening `index.html` directly will not work.
+open the local garden in [english](http://localhost:4173/?lang=en) or [russian](http://localhost:4173/?lang=ru). javascript modules need a static server, so opening `index.html` directly will not work.
 
 ## checks and captures
 
@@ -91,13 +91,27 @@ node --check app.js
 node --check garden-core.js
 node --check plants.js
 node --check garden-export.js
+```
+
+with the static server still running, install the browser tools and run the interaction, language and export regressions:
+
+```bash
 python3 -m pip install playwright pillow
 python3 -m playwright install chromium
 python3 scripts/verify-browser.py --url http://localhost:4173
 APP_URL=http://localhost:4173/ python3 scripts/verify-i18n.py
+APP_URL=http://localhost:4173/ python3 scripts/verify-export-snapshot.py
 ```
 
-the browser regression covers persistence, pause/resume, pending edits, search, import, both exports, keyboard input, reduced motion and 500 plants at 320 to 1440 px. locale checks cover defaults, switching with unsaved input, english errors and downloads, saved language and blocked storage/history. `--capture` on the garden regression updates the russian images; `scripts/capture-bilingual.py` captures both languages from the running app.
+the browser regression covers persistence, pause/resume, pending edits, search, import, both exports, keyboard input, reduced motion and 500 plants at 320 to 1440 px. language checks cover defaults, switching with unsaved input, errors, downloads and blocked storage/history. the export regression checks that a png keeps the language and project names present when downloading began, even if the interface changes while images or fonts load.
+
+refresh both sets of screenshots, downloaded snapshots and growth animations from the running app:
+
+```bash
+APP_URL=http://localhost:4173/ python3 scripts/capture-bilingual.py
+```
+
+the russian images are in `docs/images/`; english images are in `docs/images/en/`. each readme uses its own language, including the example project names.
 
 ## source and deployment
 
@@ -110,4 +124,4 @@ the browser regression covers persistence, pause/resume, pending edits, search, 
 | `garden-export.js` | png from the same plants as the garden |
 | `i18n.js` | local dictionaries, locale selection and explicit text bindings |
 
-github pages deploys `main` through the [workflow](.github/workflows/pages.yml). the [design specification](docs/superpowers/specs/2026-10-14-living-garden-design.md) records the current visual decisions.
+github pages deploys `main` through the [workflow](.github/workflows/pages.yml), after the node tests and javascript syntax checks pass. the app uses native browser modules and has no build step.

@@ -3,3 +3,11 @@ node_modules/
 *.log
 __pycache__/
 *.pyc
+
+# Local author and agent notes
+AGENTS.md
+AGENT_PROMPT.md
+docs/superpowers/
+.codex/
+.superpowers/
+.worktrees/
